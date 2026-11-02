@@ -403,6 +403,25 @@ def test_forge_new_only_creates_the_run(repo, capsys):
     assert not run.operators_dir.exists() and not run.log.exists()
 
 
+def test_resumed_run_clears_previous_failure_while_running(repo, monkeypatch):
+    task_dir = _task(repo)
+    assert launch.cmd_new([str(task_dir)]) == 0
+    run = list_runs()[0]
+    run.update(status="failed", error="old failure", loop_rc=6, stop="old", target_met=True)
+
+    def current_attempt(run, task, machine, **kwargs):
+        rec = run.record()
+        assert rec["status"] == "running"
+        assert rec["error"] is None and rec["loop_rc"] is None
+        assert rec["stop"] is None and rec["target_met"] is False
+        return 2
+
+    monkeypatch.setattr(launch, "_drive", current_attempt)
+    monkeypatch.setattr(launch, "write_report", lambda *args: None)
+    assert launch.drive(run, load_machine(repo), resuming=True) == 2
+    assert run.record()["error"] is None
+
+
 def test_a_stop_short_of_the_target_exits_2(repo, monkeypatch):
     from forgekernel.loop import cli as loop_cli
     task_dir = _task(repo)

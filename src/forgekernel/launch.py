@@ -354,7 +354,10 @@ def deny_paths(run, task) -> list[str]:
 def drive(run, machine, *, resuming: bool = False, harvest_only: bool = False) -> int:
     with _entered(run, machine):
         task = load_task(run.task_dir, name=run.task_name)
-        run.update(status=runs_mod.STATUS_RUNNING)
+        # A resumed run must not present its previous failure as current state.
+        # The prior failure remains in run.log; these fields describe this attempt.
+        run.update(status=runs_mod.STATUS_RUNNING, error=None, loop_rc=None,
+                   stop=None, target_met=False)
         try:
             rc = _drive(run, task, machine, resuming=resuming, harvest_only=harvest_only)
         except Exception as e:  # noqa: BLE001 -- the record must say why the run stopped
