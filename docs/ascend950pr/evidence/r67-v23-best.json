@@ -1,0 +1,76 @@
+{
+  "round": "67",
+  "date": "2026-11-02",
+  "topic": "v23 is the best artifact on both shapes; more output buffering hurts",
+  "variants": [
+    {
+      "name": "v23 stages=4, NORMAL_FV everywhere",
+      "prefill": {
+        "candidate_ms": 0.065149,
+        "vendor_ms": 0.052974,
+        "point": 0.807361385,
+        "interval95": [
+          0.800627872,
+          0.834272457
+        ],
+        "status": "FAIL"
+      },
+      "decode": {
+        "candidate_ms": 0.00264,
+        "vendor_ms": 0.003599,
+        "point": 1.372594123,
+        "interval95": [
+          1.35605407,
+          1.382943461
+        ],
+        "status": "EXCEED"
+      }
+    },
+    {
+      "name": "v22 read NORMAL_PREF + write NORMAL_RED",
+      "prefill": {
+        "candidate_ms": 0.06912,
+        "vendor_ms": 0.05338,
+        "point": 0.769425109,
+        "status": "FAIL"
+      }
+    },
+    {
+      "name": "v25 stages=4 with three output buffers",
+      "prefill": {
+        "candidate_ms": 0.07351,
+        "vendor_ms": 0.057085,
+        "point": 0.769477466,
+        "status": "FAIL"
+      }
+    }
+  ],
+  "decode_progression": {
+    "v4": 1.280871894,
+    "v16": 1.316035195,
+    "v20": 1.349687,
+    "v21": 1.355945086,
+    "v23": 1.372594123
+  },
+  "prefill_candidate_progression": {
+    "v4": 0.080056,
+    "v5": 0.079435,
+    "v15": 0.075503,
+    "v16": 0.074509,
+    "v18": 0.064779,
+    "v23": 0.065149
+  },
+  "findings": [
+    "v23 is the best artifact so far: decode 1.3726x EXCEED and prefill candidate 0.0651 ms",
+    "a third output buffer makes prefill worse (0.0735), so two is the right depth",
+    "policy variety on the read or write path (NORMAL_PREF / NORMAL_RED) does not beat NORMAL_FV on both",
+    "the remaining prefill gap is about 20% against a vendor reading of 0.053 ms"
+  ],
+  "hashes": {
+    "accept-v23-decode-r67-raw.json": "8ebed4c8a2b7e2052160ac32c8893571513f713c308f0cc7f01e3a7b17c9adc4",
+    "accept-v23-prefill-r67-raw.json": "16318b737e6c6f7be3c2668224e4a68aa8b2ba65fc59ec104f3dbc44c03cc04c",
+    "accept-v25-prefill-r67-raw.json": "68f448a3f260309ce46ac5e79557990f4bb80181f0325295742093a7070e2a7f",
+    "accept-v22-prefill-r67-raw.json": "e5ab9205a7e7ba275d2cf72bb4de9766f5de3b43a304a7c507c55a7a03d742c4"
+  },
+  "status": "decode met; prefill not met"
+}
