@@ -1,0 +1,10 @@
+{
+  "experiment": "SimdVF bf16->f32 conversion semantics probe",
+  "date": "2026-11-02",
+  "card": "npu:0",
+  "goal": "resolve the exact vld(UNPK_B16)+vcvt(part) lane semantics needed for a SIMD RMSNorm",
+  "probe": "loaded 128 bf16, for each 64-chunk did vld(x_ub[i*64], UNPK_B16) then vcvt(...,'float32',part=0) and part=1 into two buffers and compared to torch",
+  "finding": "part=0 reproduces the consecutive elements correctly; part=1 returns zeros here. The lane/part split is not the simple lower/upper-half model assumed; the micro-API bf16 unpack semantics are intricate and under-documented for this case",
+  "implication": "a correct SIMD RMSNorm needs the bf16 load/cast, a horizontal reduction chain (vcadd pairs) and scalar broadcast all resolved by trial; each is error-prone and a wrong result silently breaks the precision guarantee",
+  "assessment": "feasibility (vcpadd) is proven, but a correct AND faster SIMD kernel is a vendor-level, multi-day expert effort, not reliably reachable by blind iteration in this session"
+}
