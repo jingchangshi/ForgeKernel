@@ -1,0 +1,46 @@
+{
+  "round": "79",
+  "date": "2026-11-02",
+  "topic": "pre-delivery verification of the shipped candidate in a fresh process",
+  "candidate": {
+    "path": "docs/ascend950pr/candidates/rmsnorm_simdvf_v23/kernel.py",
+    "sha256": "0ba2f6574c302bb49a3f5182b077b8caf6e19141e3cf97bb53d86c27cd8c5275"
+  },
+  "correctness": [
+    {
+      "shape": "64x4096",
+      "rows": 1,
+      "rel_vs_float64": 0.000096,
+      "limit": 0.0078125,
+      "pass": true,
+      "deterministic": true,
+      "finite": true
+    },
+    {
+      "shape": "8192x4096",
+      "rows": 4,
+      "rel_vs_float64": 0.001185,
+      "limit": 0.0078125,
+      "pass": true,
+      "deterministic": true,
+      "finite": true
+    }
+  ],
+  "determinism_method": "three repeats per shape compared bit for bit",
+  "note": "this is an independent re-verification, separate from the gate runs, and it agrees with every earlier correctness result for this candidate",
+  "final_verdicts": {
+    "decode": {
+      "status": "EXCEED",
+      "windows": 3,
+      "range": "1.3550-1.4056",
+      "lower_bounds": "1.3363-1.3783"
+    },
+    "prefill": {
+      "status": "FAIL",
+      "windows": 4,
+      "range": "0.7711-0.8502",
+      "best_lower_bound": 0.8294
+    }
+  },
+  "status": "decode met; prefill not met; objective not achieved"
+}
