@@ -1,0 +1,37 @@
+{
+  "round": "66",
+  "date": "2026-11-02",
+  "topic": "policy choice matters per direction, but not the way the microbenchmark suggested",
+  "v20_results": {
+    "prefill": {
+      "candidate_ms": 0.069899,
+      "vendor_ms": 0.052706,
+      "point": 0.754022754,
+      "interval95": [
+        0.736605192,
+        0.792472326
+      ],
+      "quiet": 15,
+      "status": "FAIL"
+    },
+    "decode": {
+      "candidate_ms": 0.002635,
+      "vendor_ms": 0.003579,
+      "point": 1.349687,
+      "interval95": [
+        1.338499338,
+        1.381938411
+      ],
+      "quiet": 15,
+      "status": "EXCEED",
+      "raw": "docs/ascend950pr/evidence/accept-v20-decode-r66-raw.json"
+    }
+  },
+  "finding": "v20 used NORMAL_LV on the read path (the microbenchmark winner at 2.35 TB/s) and NORMAL_FV on the write path. Prefill regressed from v18 0.064779 to 0.069899 ms even though only the read policy changed, so in the real kernel NORMAL_FV is the better read policy as well. Microbenchmark rankings do not transfer directly to the fused kernel.",
+  "decode_note": "decode improved from v16 1.3160x to v20 1.3497x, because the looped fallback path now also carries the policy",
+  "next": "v21 applies NORMAL_FV on every DMA path (all four copies) and is correctness-clean; its gate is pending",
+  "hashes": {
+    "accept-v20-prefill-r66-raw.json": "ee5ec762b459e9831e312dc237f2d7a2170461b6f5c6791d3bb8724e9bde56ea",
+    "accept-v20-decode-r66-raw.json": "1921095bb11cf6a132079d7cbaec987572ab1d8497ae65c9a7ef7bb8a5b99247"
+  }
+}
