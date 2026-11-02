@@ -1,0 +1,27 @@
+{
+  "round": "63",
+  "date": "2026-11-02",
+  "topic": "v16 is a single artifact that is certified EXCEED on decode and still short on prefill",
+  "decode": {
+    "status": "EXCEED",
+    "point": 1.316035195,
+    "interval95": [
+      1.30129181,
+      1.332424825
+    ],
+    "candidate_ms": 0.002811,
+    "vendor_ms": 0.003693,
+    "quiet": 15,
+    "precision": "pass",
+    "authenticity": "pass",
+    "raw": "docs/ascend950pr/evidence/accept-v16-decode-r63-raw.json",
+    "sha256": "2929ad462f4019b50a41b5b585a3a6dd9dba01850eea93c1e2d7ee6c740522f2"
+  },
+  "prefill": {
+    "status": "FAIL",
+    "candidate_ms": 0.074509,
+    "note": "ratio in that window was 0.715 against a fast vendor reading of 0.0527; candidate time is the stable quantity"
+  },
+  "note": "decode improved from v4 1.2809x to v16 1.3160x; the two-phase register form helps both shapes",
+  "status": "decode met; prefill not met"
+}
