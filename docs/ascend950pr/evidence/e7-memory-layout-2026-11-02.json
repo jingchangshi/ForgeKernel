@@ -1,0 +1,29 @@
+{
+  "experiment": "E7: contiguous-block-per-core memory mapping vs the strided mapping",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "card": "npu:0",
+  "vendor_ms": 0.074691,
+  "results": [
+    {
+      "name": "strided_cw4",
+      "mapping": "step*N_CORES+core",
+      "device_ms": 0.136682,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "contig_cw4",
+      "mapping": "core block of 128 rows",
+      "device_ms": 0.137298,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "contig_cw4_r8",
+      "mapping": "core block, rows=8",
+      "device_ms": 0.156801,
+      "max_abs_err": 0.015625
+    }
+  ],
+  "conclusion": "re-mapping so each core reads a contiguous 128-row block (better DMA locality on paper) gives NO gain over the strided mapping; the hardware/L2 already absorbs the stride. rows=8 contiguous is worse.",
+  "decision": "KEEP strided mapping (no change). Layout is not the lever."
+}

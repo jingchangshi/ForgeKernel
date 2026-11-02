@@ -1,0 +1,50 @@
+{
+  "title": "Phase 2 experiment log: what moves the prefill device time and what does not",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "baseline_device_ms": 0.1628,
+  "note": "absolute vendor drifts 0.051-0.092 ms on this shared card; every comparison below is within one window, candidate-vs-candidate, which is robust",
+  "experiments": [
+    {
+      "id": "E1",
+      "what": "pipeline versions/stages 2->3, rows 4->6, threads 256->512",
+      "result": "flat 0.160-0.164 ms",
+      "keep": false
+    },
+    {
+      "id": "E3",
+      "what": "streaming reduce, no (rows,tile) fp32 fragment",
+      "result": "60-66% slower 0.263-0.273 ms",
+      "keep": false
+    },
+    {
+      "id": "E4",
+      "what": "coalesced_width 1 -> 4",
+      "result": "1.19x faster 0.1628 -> 0.1370 ms, precision unchanged",
+      "keep": true
+    },
+    {
+      "id": "E5",
+      "what": "refine cw4 with rows/stages/threads",
+      "result": "rows=4 best-divisible 0.1382; rows=6 faster but not divisible",
+      "keep": "rows=4 + cw4"
+    },
+    {
+      "id": "E6",
+      "what": "hoist w to fp32 shared / inline cast",
+      "result": "2x slower / slightly worse",
+      "keep": false
+    },
+    {
+      "id": "E7",
+      "what": "contiguous-block-per-core layout",
+      "result": "no gain over strided",
+      "keep": false
+    }
+  ],
+  "best_device_ms": 0.137,
+  "best_speedup_vs_cw1_baseline": "1.19x",
+  "standing": "with a clean vendor ~0.051 ms the best candidate is ~0.37x the vendor; this is a real step, NOT parity",
+  "exhausted": "row batch, pipeline depth, thread count, coalesced width, fragment vs streaming, w handling, memory layout",
+  "remaining_hypothesis": "the ~2.7x still missing is not any of these knobs; it needs a genuinely different implementation (vendor-level intrinsics / a different reduction+vectorisation strategy), or is out of reach with the current TileLang-Ascend surface"
+}

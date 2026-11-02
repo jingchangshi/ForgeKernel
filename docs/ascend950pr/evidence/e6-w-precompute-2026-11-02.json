@@ -1,0 +1,35 @@
+{
+  "experiment": "E6: hoist/inline the w fp32 path",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "card": "npu:0",
+  "vendor_ms": 0.081461,
+  "results": [
+    {
+      "name": "base_cw4",
+      "device_ms": 0.144071,
+      "max_abs_err": 0.015625,
+      "note": "wf fragment per step (current)"
+    },
+    {
+      "name": "w32_cw4",
+      "device_ms": 0.281062,
+      "max_abs_err": 0.015625,
+      "note": "precompute w in an fp32 shared buffer once; ~2x SLOWER - extra fp32 UB pressure"
+    },
+    {
+      "name": "inline_cw4",
+      "device_ms": 0.146884,
+      "max_abs_err": 0.015625,
+      "note": "cast w_ub inline, no wf fragment; slightly worse"
+    },
+    {
+      "name": "w32_cw4_t1024",
+      "device_ms": 0.255579,
+      "max_abs_err": 0.015625,
+      "note": "more threads does not rescue the fp32-shared variant"
+    }
+  ],
+  "conclusion": "the per-step wf fragment is the best of the three; hoisting w to an fp32 shared buffer costs ~2x (UB pressure), inline cast is slightly worse.",
+  "decision": "KEEP wf-fragment (no change from E4 baseline)."
+}
