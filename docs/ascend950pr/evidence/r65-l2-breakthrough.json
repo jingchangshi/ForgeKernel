@@ -1,0 +1,54 @@
+{
+  "round": "65",
+  "date": "2026-11-02",
+  "topic": "BREAKTHROUGH: the DMA path was crippled by an unset L2 cache policy, not saturated",
+  "discovery": {
+    "write_path": {
+      "unset_policy_TBps": 1.13
+    },
+    "policy_sweep_write": {
+      "None": 1.138,
+      "NORMAL_FV": 3.079,
+      "NORMAL_RED": 3.089,
+      "NOTALLOC_CI": 1.134,
+      "NOTALLOC_PW": 1.132,
+      "NOTALLOC_RED": 1.13,
+      "WBH_FV": 1.112,
+      "WTS_FV": 1.154,
+      "WTS_LV": 1.12
+    },
+    "policy_sweep_read": {
+      "None": 2.104,
+      "NORMAL_FV": 2.12,
+      "NORMAL_LV": 2.351,
+      "NORMAL_PREF": 2.139,
+      "IDS_FV": 1.819,
+      "EXCLUSIV_FV": 2.104,
+      "NOTALLOC_KEEP": 0.906
+    },
+    "reading": "setting l2_cache_ctrl explicitly lifts the UB->GM write path from 1.13 to about 3.08 TB/s (2.7x) and the GM->UB read path peaks at 2.35 TB/s with NORMAL_LV. The earlier conclusion that the write path was saturated at 1.13 TB/s was wrong: it was the default policy of an unset hint."
+  },
+  "kernel_results": [
+    {
+      "variant": "v18 both copies NORMAL_FV",
+      "candidate_ms": 0.064779,
+      "vendor_ms": 0.050191,
+      "point": 0.77205698,
+      "interval95": [
+        0.768081491,
+        0.803328279
+      ],
+      "quiet": 15,
+      "precision": "pass",
+      "authenticity": "pass"
+    },
+    {
+      "variant": "v16 (no policy)",
+      "candidate_ms": 0.074509
+    }
+  ],
+  "improvement": "v18 is 13% faster than v16 on the stable candidate-time metric",
+  "pending": "v19 (NORMAL_LV read + NORMAL_FV write) is correctness-clean and deterministic but its gate is still blocked by device contention",
+  "correction": "R64 concluded the copy path was saturated at 1.7 TB/s aggregate. That conclusion is withdrawn: it measured the unset-policy path.",
+  "status": "prefill gate now 0.772 in the v18 window; candidate time 0.0648 ms, the best so far"
+}
