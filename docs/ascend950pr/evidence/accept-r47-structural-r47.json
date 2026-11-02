@@ -1,0 +1,42 @@
+{
+  "round": "47",
+  "date": "2026-11-02",
+  "topic": "multi-accumulator candidate: independent gate results and why certification is structurally blocked on this host",
+  "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_multiacc/kernel.py",
+  "results": {
+    "prefill_8192x4096": {
+      "precision": "pass",
+      "authenticity": "pass",
+      "timing": "RETEST",
+      "quiet": 0,
+      "contended": 15,
+      "raw": "docs/ascend950pr/evidence/accept-multiacc-prefill-r46-raw.json"
+    },
+    "decode_64x4096": {
+      "precision": "pass",
+      "authenticity": "pass",
+      "timing": "RETEST",
+      "quiet": 0,
+      "contended": 15,
+      "raw": "docs/ascend950pr/evidence/accept-multiacc-decode-r47-raw.json",
+      "sha256": "4656ea8a65362f7665bb9700a330e1d092397d75caa14c6f7da10fa5b309e807"
+    }
+  },
+  "exclusion_breakdown_decode": {
+    "windows": 15,
+    "co_tenant_presence": 15,
+    "pid_only": 13,
+    "positive_signal": 2,
+    "thresholds": {
+      "aicore_percent": 20,
+      "canary_inflation": 1.15
+    }
+  },
+  "finding": "On this shared host a co-tenant is resident in essentially every window, so the gate classifies every window as contended. In 13 of 15 decode windows the only trigger was process presence with no positive interference signal. The gate therefore cannot certify anything while a neighbour is resident, even though the operating rule says a neighbour's use is normal.",
+  "decision": "Do NOT relax the classifier: a flat canary and sparse utilisation sampling cannot prove the absence of interference, so treating presence-only windows as quiet would over-claim. Record the result as RETEST and state the structural cause instead.",
+  "paths_to_certification": [
+    "a window with no resident co-tenant that also shows positive absence-of-interference evidence",
+    "a materially stronger in-window contention witness than the current canary/sampling"
+  ],
+  "not_proven": "neither shape is certified; no per-shape speedup conclusion is drawn from these runs"
+}
