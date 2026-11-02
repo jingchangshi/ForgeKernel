@@ -1,0 +1,53 @@
+{
+  "round": "81",
+  "date": "2026-11-03",
+  "topic": "feasibility study: msprof op simulator on a minimal equivalent model of v23",
+  "environment": {
+    "msprof": "/data/pri/cann-9.2.0/cann-9.2.0-beta.2/bin/msprof, has an `op simulator` subcommand",
+    "soc_models": "simulator/dav_3510 plus per-SoC models; Ascend950PR_9571..9599 and others are populated (159 MB each) but the exact Ascend950PR_9579 directory for this chip is empty",
+    "smoke": "msprof op simulator accepted --soc-version=Ascend950PR_9579 and ran a TileLang kernel end to end"
+  },
+  "what_works": {
+    "kernel_ran": true,
+    "kernel_name_captured": "StatelessNormal_..._high_performance_100_mix_aiv",
+    "outputs": [
+      "per-core duration/running time",
+      "simulator/coreN.veccoreM/coreN.veccoreM_instr_exe.csv with instr, pipe, call_count, cycles, running_time per instruction",
+      "coreN.veccoreM_code_exe.csv",
+      "trace.json timeline",
+      "dump/ with instr, dcache, ccu and exception logs",
+      "621 dependency relations extracted from the kernel"
+    ],
+    "instr_level_value": "this is strictly richer than device-side msprof, which only reports pipe busy percentages"
+  },
+  "minimal_model_tested": {
+    "definition": "1 core, rows=4, d=4096, 6 iterations (24 rows): same tile shape and same code as v23, only the core count and iteration count reduced",
+    "correctness_on_device": "matches float64 exactly (rel 0.0)",
+    "sim_wall_time_seconds": 341,
+    "sim_modeled_kernel_time_us": 8.1,
+    "device_time_for_same_model_us": 5.826,
+    "calibration": "the simulator is within about 39% of the device on wall duration for the same model, same order of magnitude"
+  },
+  "critical_finding": {
+    "instruction_mix": "the simulated kernel reports SIMT_LDK / SIMT_STG / SIMT_IMUL / SIMT_FFMA instructions on pipes RVECLD (51% of cycles), RVECEX (27%), RVECST (17.6%), SCALAR (2.6%), MTE2 (0.1%)",
+    "device_for_same_model": "vec 87.7% busy, mte2 27.3%, mte3 24.8% of a 5.83 us window",
+    "disagreement": "the simulator accounts essentially no DMA (MTE2 0.1%) while the device reports DMA active 27% of the time on this model and 86-93% on the full kernel",
+    "bottleneck_flip": "the 1-core model is vector-bound (vec 87.7%), but the real 64-core kernel is memory-bound (mte2 86-93%, vec 43-46%). Reducing the core count removes exactly the DRAM contention that is the real bottleneck."
+  },
+  "decision": {
+    "verdict": "introduce, but narrowly scoped and never as the arbiter",
+    "keep": [
+      "64 cores, so the DRAM contention regime is preserved",
+      "reduce the ITERATION count instead (2-3 iterations = 128-192 tiles vs 2048), which cuts simulation time 16-32x while keeping the bandwidth contention"
+    ],
+    "do_not_use_for": "DMA or bandwidth conclusions, because the simulator under-models MTE2 by two orders of magnitude",
+    "use_for": [
+      "instruction mix and per-instruction cycle cost in the compute path",
+      "dependency and synchronization waits between the SimdVF block and the copies",
+      "register pressure and scheduling questions",
+      "generating hypotheses that the paired gate then decides on"
+    ],
+    "prerequisite": "calibrate on a 64-core 2-iteration model: if its per-tile duration agrees with the real kernel within about 20%, the model is usable for compute-side attribution; otherwise restrict it to pure instruction-mix questions"
+  },
+  "next": "build the 64-core / 2-iteration model next round and run the calibration"
+}
