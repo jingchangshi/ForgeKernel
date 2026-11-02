@@ -1,0 +1,25 @@
+{
+  "experiment": "E9: hardware reduce_sum vs the manual reducer",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "card": "npu:0",
+  "vendor_ms": 0.069928,
+  "rationale": "RMSNorm is reduction-heavy; T.reduce_sum lowers to a hardware reduction, while the current kernel accumulates with a manual reducer element by element",
+  "results": [
+    {
+      "name": "reduce_r4",
+      "rows": 4,
+      "device_ms": 0.137967,
+      "max_abs_err": 0.015625,
+      "note": "same as the manual cw4 ~0.137"
+    },
+    {
+      "name": "reduce_r2",
+      "rows": 2,
+      "device_ms": 0.161536,
+      "max_abs_err": 0.015625
+    }
+  ],
+  "conclusion": "the hardware reduce_sum is no faster than the manual reducer (0.138 vs ~0.137 ms). The reduction method is not the bottleneck.",
+  "decision": "KEEP the manual reducer (no change)."
+}

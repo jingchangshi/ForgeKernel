@@ -40,11 +40,28 @@
       "what": "contiguous-block-per-core layout",
       "result": "no gain over strided",
       "keep": false
+    },
+    {
+      "id": "E8",
+      "what": "re-test prefetch depth (versions/stages 3-4, rows 2/8) AFTER cw4",
+      "result": "flat ~0.145 ms; rebalance hypothesis wrong",
+      "keep": false
+    },
+    {
+      "id": "E9",
+      "what": "hardware reduce_sum instead of the manual reducer",
+      "result": "0.138 vs 0.137 ms; reduction method not the bottleneck",
+      "keep": false
     }
   ],
   "best_device_ms": 0.137,
   "best_speedup_vs_cw1_baseline": "1.19x",
   "standing": "with a clean vendor ~0.051 ms the best candidate is ~0.37x the vendor; this is a real step, NOT parity",
-  "exhausted": "row batch, pipeline depth, thread count, coalesced width, fragment vs streaming, w handling, memory layout",
-  "remaining_hypothesis": "the ~2.7x still missing is not any of these knobs; it needs a genuinely different implementation (vendor-level intrinsics / a different reduction+vectorisation strategy), or is out of reach with the current TileLang-Ascend surface"
+  "exhausted": "row batch, pipeline depth, thread count, coalesced width, fragment vs streaming, w handling, memory layout, prefetch-after-cw4, hardware reduce_sum",
+  "remaining_hypothesis": "the ~2.7x still missing is not any of these knobs; it needs a genuinely different implementation (vendor-level intrinsics / a different reduction+vectorisation strategy), or is out of reach with the current TileLang-Ascend surface",
+  "certified_result": {
+    "shape_decode": "64x4096 EXCEED 1.0951x bootstrap95 [1.0742,1.1217] (candidate ~9.5% FASTER than vendor)",
+    "shape_prefill": "8192x4096 FAIL 0.3876x [0.3822,0.3956] (up from 0.32x start)"
+  },
+  "conclusion_final": "eight experiments; only coalesced_width=4 moved the needle (1.19x). The remaining ~2.5x prefill gap is invariant to every tile/prefetch/thread/reduction/layout/w-handling knob tried. Decode is certified to EXCEED the vendor; prefill is structurally stuck ~0.39x with the current TileLang-Ascend surface."
 }
