@@ -1,0 +1,109 @@
+{
+  "generatedAt": "2026-11-02T14:57:35.867Z",
+  "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v23/kernel.py",
+  "verdicts": {
+    "decode": {
+      "status": "EXCEED",
+      "point": 1.372594123,
+      "interval95": [
+        1.35605407,
+        1.382943461
+      ],
+      "repeat": {
+        "point": 1.405644741,
+        "interval95": [
+          1.378313143,
+          1.449252368
+        ]
+      }
+    },
+    "prefill": {
+      "status": "FAIL",
+      "candidate_ms": [
+        0.065149,
+        0.069417
+      ],
+      "ratio": [
+        0.807361385,
+        0.81331163
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "file": "final-status.md",
+      "bytes": 4766,
+      "sha256": "69ccf09db225e9eea683609583a025820dab24ae4a1d6ec5dd4e38c25af863a4"
+    },
+    {
+      "file": "d3-assessment.md",
+      "bytes": 5755,
+      "sha256": "e3d56fac292f8fdce1de7dd551d81c629a4ce1296b7c3d7e78b02a9f0fec711b"
+    },
+    {
+      "file": "evidence/accept-v23-prefill-r67-raw.json",
+      "bytes": 12808,
+      "sha256": "16318b737e6c6f7be3c2668224e4a68aa8b2ba65fc59ec104f3dbc44c03cc04c"
+    },
+    {
+      "file": "evidence/accept-v23-decode-r67-raw.json",
+      "bytes": 12616,
+      "sha256": "8ebed4c8a2b7e2052160ac32c8893571513f713c308f0cc7f01e3a7b17c9adc4"
+    },
+    {
+      "file": "evidence/accept-v23-decode-r69-repeat-raw.json",
+      "bytes": 12567,
+      "sha256": "9df684a5801cda67c6e54d8b49bc542c21d286115bd60c7f91499aa7562ce3b1"
+    },
+    {
+      "file": "evidence/accept-v23-prefill-r69-repeat-raw.json",
+      "bytes": 12750,
+      "sha256": "16dd59c8849da6a1ca00384f2d71e376cb5474df220692f85acf969d5d38af54"
+    },
+    {
+      "file": "evidence/r65-l2-breakthrough.json",
+      "bytes": 1871,
+      "sha256": "be29fd9d7410c234d0440bf47241a41a2cda51d3dcf3e18d6dfc04b560ab7a0c"
+    },
+    {
+      "file": "evidence/r66-v21-best.json",
+      "bytes": 1974,
+      "sha256": "cf8dc802592408cba39caf35022a859bfb8a2e70f07caebe7b7ad5b18291784b"
+    },
+    {
+      "file": "evidence/r67-v23-best.json",
+      "bytes": 2284,
+      "sha256": "8d8c56105facff8142d4a2b8e5b3a17fbcebd69084a64d283aa95d6da0f55cc4"
+    },
+    {
+      "file": "evidence/r68-no-better-variant.json",
+      "bytes": 1767,
+      "sha256": "d6bec49b857ada97ec37c4132030cf7bc4032256e86e9bd0aebbed76d9679898"
+    },
+    {
+      "file": "evidence/r69-decode-repeat.json",
+      "bytes": 1202,
+      "sha256": "090b6911041a1127854395d1c7eae3207e48d76deed6341738397f36d2e30cbb"
+    },
+    {
+      "file": "evidence/r70-manual-pipeline.json",
+      "bytes": 1787,
+      "sha256": "f1bdb61972531879633043edbf59cff8cf165a8c17c39aa131de8d767915809e"
+    },
+    {
+      "file": "evidence/r59-two-phase-race.json",
+      "bytes": 1661,
+      "sha256": "378869f36ca86335b10f3d17aacb5e3493274e11c05b9d5a96000324092e2334"
+    },
+    {
+      "file": "evidence/r58-correction-partition-claim.json",
+      "bytes": 2495,
+      "sha256": "4cb97bb73001e84b58b7e342c97173226678d088acd774d0162959b24820e506"
+    },
+    {
+      "file": "candidates/rmsnorm_simdvf_v23/kernel.py",
+      "bytes": 15003,
+      "sha256": "0ba2f6574c302bb49a3f5182b077b8caf6e19141e3cf97bb53d86c27cd8c5275"
+    }
+  ]
+}
