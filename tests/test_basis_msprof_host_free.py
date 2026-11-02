@@ -20,3 +20,16 @@ def test_a_msprof_reading_is_never_called_host_bound():
 def test_a_plain_window_is_still_judged_host_bound():
     v = timing_audit.classify(host_enqueue_ms=0.5, device_median_ms=0.05, basis="plain_batch")
     assert v.host_bound and v.measured
+
+def test_an_npu_msprof_reference_anchors_the_target_without_a_host_bound_refusal():
+    """A reference measured on the msprof basis is host-free, so target_ms anchors on
+    its device reading and the host-bound blocker must not fire even though the plain
+    enqueue ratio looks high (0.77)."""
+    from forgekernel import baseline
+    b = baseline.RefBaseline(op="rmsnorm", role=baseline.ROLE_ARCHITECTURE, ms=0.30,
+                             ms_device=0.26, device_window_basis="msprof",
+                             host_enqueue_ms=0.20, host_bound_ratio=0.77)
+    assert b.device_anchor_basis == "msprof"
+    assert b.device_anchor_ms == 0.26
+    assert b.host_bound.host_bound is False
+    assert b.target_ms(1.0) == 0.26
