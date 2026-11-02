@@ -1,0 +1,34 @@
+{
+  "round": "61",
+  "date": "2026-11-02",
+  "topic": "v15 (race-free two-phase, per-row registers) is faster than the previous best and passes the gate on both non-performance legs",
+  "gate": {
+    "status": "FAIL",
+    "point": 0.830155683,
+    "interval95": [
+      0.819523246,
+      0.859702685
+    ],
+    "medianCandidateMs": 0.075503,
+    "medianVendorMs": 0.06206,
+    "quietWindows": 15,
+    "contendedWindows": 0,
+    "decisionSampleWindows": 15,
+    "precision": "pass",
+    "authenticity": "pass",
+    "raw": "docs/ascend950pr/evidence/accept-v15-prefill-r61-raw.json",
+    "sha256": "8bcc8a0f705af4d2c303c9a7bac3cadddb5f8f7d7eb496e6731a3bbd154820e1"
+  },
+  "candidate_time_progression": {
+    "v4": "0.080056 ms",
+    "v5": "0.079435 ms",
+    "v15": "0.075503 ms"
+  },
+  "interpretation": [
+    "the candidate time is the stable quantity across windows; it has genuinely fallen about 6% from v4 to v15",
+    "the ratio is 0.83 in this window with a fast vendor reading; the vendor was 0.0621 here versus 0.0523-0.0645 across earlier windows, so the ratio should still be read as roughly 0.7-0.83 depending on the window",
+    "the remaining gap to parity is about 18% on the candidate time"
+  ],
+  "also_learned": "a \"quiet window\" is scarce: on this host both cards usually carry presence-only co-tenants (AICore peak 1%, canary inflation 1.004) which the gate rightly refuses to treat as quiet. A patient runner that retries until quiet==15 obtained a decisive window on the second attempt.",
+  "status": "prefill still fails; decode EXCEED 1.2809 stands; v15 is the new best prefill candidate"
+}
