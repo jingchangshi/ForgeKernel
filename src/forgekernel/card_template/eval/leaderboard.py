@@ -2480,10 +2480,15 @@ def _task_ref_alone(problem: dict, ref_fn, ref_dps: bool, device) -> int:
     perf = _task_aggregate(problem, blocks)
     out = {"median_ms": perf["bwd_median_ms"], "device_median_ms": perf["device_median_ms"],
            "device_window_basis": fk_dev.device_timer_name(), "host_enqueue_ms": perf.get("host_enqueue_ms"),
+           # Preserve the worst workload ratio: deriving a ratio from aggregate
+           # geometric means can hide a host-bound shape.
+           "host_bound_ratio": perf.get("host_bound_ratio"),
            "leaderboard_timer": "timing.py", "clock": clock_state(),
            "aggregate": "geomean", "n_workloads": perf.get("n_workloads", len(blocks)),
            "workloads": [{"name": w.get("name"), "median_ms": w.get("bwd_median_ms"),
-                          "device_median_ms": w.get("device_median_ms")}
+                          "device_median_ms": w.get("device_median_ms"),
+                          "host_enqueue_ms": w.get("host_enqueue_ms"),
+                          "host_bound_ratio": w.get("host_bound_ratio")}
                          for w in perf.get("workloads", [])]}
     _emit(out)
     return 0

@@ -160,6 +160,42 @@ def test_task_error_computes_on_host_float64():
     assert why is None and err > 0.0
 
 
+def test_reference_output_preserves_worst_host_bound_ratio(monkeypatch):
+    import json
+    from forgekernel.baseline import RefBaseline
+    from forgekernel.baseline_cli import parse_ref_stdout
+
+    lb = _load("_reference_audit_lb", EVAL / "leaderboard.py")
+    blocks = [
+        {"name": "a", "bwd_median_ms": 1.0, "device_median_ms": 1.0,
+         "host_enqueue_ms": 0.04, "host_bound_ratio": 0.04},
+        {"name": "b", "bwd_median_ms": 1.0, "device_median_ms": 1.0,
+         "host_enqueue_ms": 0.88, "host_bound_ratio": 0.88},
+    ]
+    views = [{"_wl_name": b["name"], "workload": {"axes": {}}} for b in blocks]
+    monkeypatch.setattr(lb, "_task_shapes", lambda problem: views)
+    monkeypatch.setattr(lb, "_correctness", lambda *args: ({"pass": True}, []))
+    monkeypatch.setattr(lb, "_task_side", lambda v, *args: next(b for b in blocks if b["name"] == v["_wl_name"]))
+    monkeypatch.setattr(lb, "_task_aggregate", lambda problem, items: {
+        "bwd_median_ms": 1.0, "device_median_ms": 1.0,
+        "host_enqueue_ms": (0.04 * 0.88) ** 0.5,
+        "host_bound_ratio": 0.88, "aggregate": "geomean",
+        "n_workloads": 2, "workloads": items,
+    })
+    monkeypatch.setattr(lb, "clock_state", lambda: "unlocked")
+    emitted = []
+    monkeypatch.setattr(lb, "_emit", emitted.append)
+    assert lb._task_ref_alone({}, object(), False, "cuda") == 0
+    result = parse_ref_stdout(json.dumps(emitted[0]))
+    assert result["host_bound_ratio"] == pytest.approx(0.88)
+    assert [w["host_bound_ratio"] for w in emitted[0]["workloads"]] == [0.04, 0.88]
+    baseline = RefBaseline(op="rmsnorm", ms=result["ms"],
+                           ms_device=result["ms_device"],
+                           host_enqueue_ms=result["host_enqueue_ms"],
+                           host_bound_ratio=result["host_bound_ratio"])
+    assert baseline.host_bound.host_bound
+
+
 def test_card_problem_carries_the_device_derived_from_arch():
     from forgekernel import taskcard
 
