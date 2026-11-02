@@ -1,0 +1,22 @@
+{
+  "experiment": "is the prefill gap my kernel's deficiency or a TileLang-vs-vendor capability limit?",
+  "date": "2026-11-02",
+  "card": "npu:0",
+  "method": "benchmark TileLang official examples/ascend/example_rmsnorm.py against torch_npu.npu_rms_norm in one window, msprof device time",
+  "results": {
+    "official_example_fp32_8192x4096": {
+      "example_ms": 0.22853,
+      "vendor_ms": 0.158567,
+      "ratio": 0.6939,
+      "max_abs_err": 0.00000286,
+      "note": "TileLang's OWN official RMSNorm example is only 0.69x of the vendor on fp32"
+    },
+    "official_example_bf16": "does not run - T.copy cannot cast bf16->fp32 outside a VF block; the official example is fp32-only"
+  },
+  "key_insight": [
+    "vendor bf16 (0.051 ms) is ~3x FASTER than vendor fp32 (0.159 ms) on the same shape: the vendor bf16 path is heavily optimised (bf16-native compute / less traffic)",
+    "our bf16 kernel upcasts to fp32 for the statistics (the precision gate demands fp32 accumulation), so it pays fp32-level cost on bf16 data - this is why bf16 lands ~0.39x while fp32 lands ~0.69x",
+    "the repo's own official RMSNorm uses the same SimtVF structure and does NOT reach vendor parity even on fp32"
+  ],
+  "conclusion": "the prefill gap is a TileLang-vs-vendor-implementation capability gap, not a defect of this particular kernel. TileLang's best available RMSNorm (official example, and this kernel's cw4 variant) does not reach the vendor's bf16 operator. Reaching parity needs a bf16-native, vendor-level kernel (SIMD micro-API with bf16 compute that still meets the fp32-stats precision gate) - a research effort beyond parameter tuning or the official example."
+}
