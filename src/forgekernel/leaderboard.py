@@ -856,9 +856,11 @@ lb_clocks_read() {{
     lb_smi --query-gpu=clocks.current.graphics,clocks.current.memory \
         --format=csv,noheader,nounits 2>/dev/null | tr -d ' ' | paste -sd ';' - || true
 }}
-lb_clocks_reset
 LB_CLOCK_STATE="unlocked"
-if [ -n "$LB_SM_CLOCK_MHZ" ]; then
+if [ "{install_cupti}" = "1" ]; then
+    lb_clocks_reset
+fi
+if [ "{install_cupti}" = "1" ] && [ -n "$LB_SM_CLOCK_MHZ" ]; then
     trap lb_clocks_reset EXIT
     if lb_smi -lgc "$LB_SM_CLOCK_MHZ,$LB_SM_CLOCK_MHZ" > /dev/null 2>&1 && \
        {{ [ -z "$LB_MEM_CLOCK_MHZ" ] || \
@@ -888,7 +890,7 @@ export LB_CLOCK_STATE
 # The board's clock is CUPTI read with cupti-python; without it eval/leaderboard.py falls
 # back to torch.profiler, whose per-op instrumentation reads multi-kernel calls long.
 # Best effort, bounded; bake cupti-python into the image to skip it.
-if [ "${{LB_INSTALL_CUPTI:-{install_cupti}}}" = "1" ] && ! python3 -c "import cupti" 2>/dev/null; then
+if [ "{install_cupti}" = "1" ] && [ "${{LB_INSTALL_CUPTI:-{install_cupti}}}" = "1" ] && ! python3 -c "import cupti" 2>/dev/null; then
     timeout 180 python3 -m pip install -q cupti-python > /dev/null 2>&1 \
         || echo "[gpu_entry.sh] cupti-python not installable — timer falls back to torch.profiler"
 fi
@@ -908,11 +910,16 @@ echo "=== gpu_entry.sh ({name}, {suite}) ==="
 echo "  task:      ${{1:-help}}"
 echo "  hostname:  $(hostname)"
 echo "  date:      $(date '+%Y-%m-%d %H:%M:%S')"
-echo "  GPU:       $(lb_smi --query-gpu=name,clocks.sm,clocks.mem,clocks.max.sm --format=csv,noheader 2>/dev/null || echo 'N/A')"
+if [ "{install_cupti}" = "1" ]; then
+    echo "  GPU:       $(lb_smi --query-gpu=name,clocks.sm,clocks.mem,clocks.max.sm --format=csv,noheader 2>/dev/null || echo 'N/A')"
+else
+    echo "  device:    NPU (NVIDIA clock control disabled)"
+    LB_REQUIRE_CLOCK_LOCK=0
+fi
 echo "  clocks:    $LB_CLOCK_STATE"
 # A lock that did not take: what the driver reports about the GPU right after (event
 # reasons, the clock it settled at, power, temperature) — the evidence for the node.
-if [ -n "$LB_SM_CLOCK_MHZ" ] && [ "${{LB_CLOCK_STATE%% *}}" != "locked" ]; then
+if [ "{install_cupti}" = "1" ] && [ -n "$LB_SM_CLOCK_MHZ" ] && [ "${{LB_CLOCK_STATE%% *}}" != "locked" ]; then
     echo "  clockdiag: $(lb_smi --query-gpu=clocks_event_reasons.active,clocks.sm,clocks.max.sm,power.draw,power.limit,temperature.gpu,pstate --format=csv,noheader 2>/dev/null || echo 'N/A')"
 fi
 echo "  PyTorch:   $(python3 -c 'import torch; print(f"{{torch.__version__}} CUDA={{torch.version.cuda}}")' 2>/dev/null || echo 'N/A')"

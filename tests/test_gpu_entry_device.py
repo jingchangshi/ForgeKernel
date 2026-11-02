@@ -38,10 +38,21 @@ def test_the_marker_timeout_and_dispatch_are_identical_across_devices():
         assert line in npu, line
 
 
-def test_install_cupti_is_the_only_rendered_difference():
-    cuda = _render("1").splitlines()
-    npu = _render("0").splitlines()
-    assert len(cuda) == len(npu)
-    differing = [(a, b) for a, b in zip(cuda, npu) if a != b]
-    assert len(differing) == 1
-    assert "LB_INSTALL_CUPTI" in differing[0][0]
+def test_npu_entry_does_not_touch_nvidia_clocks_or_install_cupti(tmp_path):
+    import os
+    import subprocess
+
+    marker = tmp_path / "smi-called"
+    fake = tmp_path / "nvidia-smi"
+    fake.write_text('#!/bin/sh\ntouch "$SMI_MARKER"\n')
+    fake.chmod(0o755)
+    entry = tmp_path / "gpu_entry.sh"
+    entry.write_text(_render("0"))
+    env = dict(os.environ, LB_NVIDIA_SMI=str(fake), SMI_MARKER=str(marker),
+               LB_SM_CLOCK_MHZ="1500", LB_REQUIRE_CLOCK_LOCK="1",
+               LB_INSTALL_CUPTI="1", SOL_ENV=str(tmp_path / "absent"))
+    result = subprocess.run(["bash", str(entry), "cmd", "true"], env=env,
+                            text=True, capture_output=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not marker.exists()
+    assert "task=cmd finished" in result.stdout
