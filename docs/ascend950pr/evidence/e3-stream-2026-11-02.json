@@ -1,0 +1,44 @@
+{
+  "experiment": "E3: streaming reduce (no (rows,tile) fp32 fragment) against the vendor",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "card": "npu:1 (no processes reported, but high power/temperature; vendor absolute unstable this session)",
+  "method": "msprof per-kernel device time, vendor bracketed in the same window",
+  "vendor_ms": 0.086184,
+  "vendor_samples": [
+    0.091839,
+    0.08053
+  ],
+  "caveat": "vendor absolute moved 0.051-0.092 ms across this session on the shared card; only within-window comparisons are valid",
+  "results": [
+    {
+      "name": "e3_stream_r4",
+      "rows": 4,
+      "versions": 2,
+      "stages": 2,
+      "threads": 256,
+      "device_ms": 0.272691,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "e3_stream_r8",
+      "rows": 8,
+      "versions": 2,
+      "stages": 2,
+      "threads": 256,
+      "device_ms": 0.263025,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "e3_stream_r8_v3",
+      "rows": 8,
+      "versions": 3,
+      "stages": 3,
+      "threads": 256,
+      "error": "UB overflow dyn_ubuf 271360 > 262144"
+    }
+  ],
+  "conclusion": "removing the (rows,tile) fp32 fragment and reducing straight from shared, reading x_ub twice, is 60-66% SLOWER (0.263-0.273 ms vs the 0.164 ms fragment-based baseline). The fp32 fragment is not the overhead; it is the better data path. rows=8 with 3 versions again overflows UB.",
+  "decision": "KEEP none; REVERT. Together with E1 (deeper prefetch flat) this exhausts the cheap data-path knobs: the ~3x gap is structural. Closing it needs a genuinely different design (e.g. a vendor-like layout using L1 or a different reduction/vectorisation), not tile/prefetch/fragment tweaks.",
+  "reproduce": "docs/ascend950pr/scripts/e3_stream.py"
+}
