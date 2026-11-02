@@ -1,0 +1,48 @@
+{
+  "round": "6",
+  "date": "2026-11-02",
+  "topic": "pipe attribution, bf16 vector width, rows sweep; vector-pipe floor identified",
+  "card": "shared NPU 1",
+  "pipe_attribution": {
+    "kernel": {
+      "dur_us": 122.579,
+      "vec": 0.7313,
+      "mte2": 0.6493,
+      "mte3": 0.226,
+      "scalar": 0.021
+    },
+    "vendor": {
+      "dur_us": 70.18,
+      "vec": 0.5246,
+      "mte2": 0.9166,
+      "mte3": 0.781,
+      "scalar": 0.102
+    }
+  },
+  "findings": {
+    "bf16_vector_width": "a bf16 vld yields 64 elements; vcvt part=1 returns zeros, so there is no 128-element bf16 vector path to halve loads",
+    "vmull": "widening multiply is int32-only; no bf16 widening multiply-accumulate exists",
+    "vector_bound": "the kernel is vector-bound: vec busy is ~73% of 122.6 us = ~89.6 us, so this two-pass vector algorithm cannot go below ~90 us -> at best ~0.80x against a 72 us vendor reading",
+    "sweep": {
+      "rows2_stages2": {
+        "ms": 0.12277,
+        "ratio": 0.5883
+      },
+      "rows4_stages2": {
+        "ms": 0.11957,
+        "ratio": 0.6041
+      },
+      "rows4_stages3": {
+        "ms": 0.12094,
+        "ratio": 0.5972
+      },
+      "rows8_stages2": {
+        "ms": 0.11613,
+        "ratio": 0.622,
+        "note": "best; UB still fit"
+      }
+    }
+  },
+  "conclusion": "SimdVF improved the ratio from ~0.39x (SimtVF) to ~0.622x, but the two-pass vector implementation has a structural ceiling near 0.8x. Reaching 1.0 needs the square-and-reduce work moved off the vector pipe (e.g. cube/matmul dot product with fp32 accumulate) or a different algorithm.",
+  "not_proven": "no witness-audited measurement; vendor reading window varies (0.068-0.072 here); no acceptance; no per-shape parity"
+}
