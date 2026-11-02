@@ -1,0 +1,25 @@
+{
+  "round": "3-5",
+  "date": "2026-11-02",
+  "topic": "SimdVF RMSNorm works end to end; w preconversion helps; still below parity",
+  "card": "shared NPU 1",
+  "results": {
+    "single_row": "D=4096 single row: SimdVF kernel matches CPU float64 exactly (max_abs 0.0)",
+    "multi_core": "batch 512, 64 cores, rows=4, two-pass: correct, rel err 0.00119 <= 2^-7",
+    "full_shape_correct": "8192x4096: correct, rel err 0.00208 <= 2^-7",
+    "timing_first": "kernel 0.12667 ms vs vendor 0.06825 ms -> ratio 0.539 (5 interleaved samples each)",
+    "timing_wpreconvert": "preconverting w to f32 once gave kernel 0.1234 ms -> ratio 0.581 (5 interleaved samples each)"
+  },
+  "comparison": {
+    "previous_simtvf": "~0.39x (contested readings)",
+    "simdvf_now": "~0.58x (contested readings, same window)",
+    "delta": "SimdVF is materially faster than SimtVF on this shape"
+  },
+  "status": "a correct SimdVF kernel exists and is faster than the SimtVF one, but is still ~0.58x of the vendor; the target is >=1.0 with bootstrap lower bound >=0.98",
+  "unknowns": [
+    "pipe attribution (vec vs mte2 vs mte3) not yet measured for this kernel",
+    "no adversarial-witness acceptance run",
+    "vendor reading varies by window (0.068-0.072 ms here vs ~0.05 earlier)"
+  ],
+  "not_proven": "no per-shape parity; no acceptance; readings are a single process and not witness-audited"
+}
