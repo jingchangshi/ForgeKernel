@@ -1,0 +1,47 @@
+{
+  "round": "74",
+  "date": "2026-11-02",
+  "topic": "CORRECTION: for prefill the absolute times move together, so the ratio is the more stable quantity",
+  "correction": {
+    "retracted": "I repeatedly said the candidate time is the stable quantity and the ratio is not, based on a few windows that happened to have a stable candidate",
+    "why": "a third clean prefill window gave a candidate time of 0.078896 ms against 0.065149 and 0.069417 in the earlier two: a 21% spread. The vendor moved the same way (0.052974 -> 0.056349 -> 0.061855), so the ratio stayed in a narrow band while both absolute numbers drifted."
+  },
+  "statistics": {
+    "prefill": {
+      "candidate_ms": {
+        "min": 0.065149,
+        "max": 0.078896,
+        "spread_percent": 21.1
+      },
+      "vendor_ms": {
+        "min": 0.052974,
+        "max": 0.061855
+      },
+      "ratio": {
+        "min": 0.771066795,
+        "max": 0.81331163,
+        "spread_percent": 5.5
+      },
+      "windows": 3
+    },
+    "decode": {
+      "candidate_ms": {
+        "min": 0.00264,
+        "max": 0.002673,
+        "spread_percent": 1.3
+      },
+      "ratio": {
+        "min": 1.354979381,
+        "max": 1.405644741,
+        "spread_percent": 3.7
+      },
+      "windows": 3
+    }
+  },
+  "correct_reading": {
+    "prefill": "the paired ratio is the right comparison for prefill: three windows give 0.771-0.813, so the kernel is about 19-23% slower than the vendor",
+    "decode": "the decode candidate is genuinely stable (1.3% spread) and the ratio is 1.355-1.406, comfortably above the 0.98 lower bound in every window"
+  },
+  "consequence": "version-to-version comparisons based on single windows are unsafe for prefill unless the difference exceeds roughly 20%, which none of the rejected variants did",
+  "status": "decode met; prefill not met"
+}
