@@ -1,0 +1,34 @@
+{
+  "experiment": "acceptance gate on the cw4 candidate (both shapes)",
+  "date": "2026-11-02",
+  "card": "npu:0",
+  "gate_result": "RETEST (all 12 windows flagged contended by co-tenant presence; precision=pass, authenticity=pass)",
+  "why_raw_is_usable": "the windows' own canary inflation is ~1.00-1.03 (no real interference) and the prefill vendor median 0.0554 ms is close to the clean 0.0514 ms, so the paired ratios are informative even though the gate would not certify them",
+  "per_shape": {
+    "64x4096": {
+      "windows": 12,
+      "median_ratio": 1.0773,
+      "min": 1.0124,
+      "max": 1.1428,
+      "bootstrap95": [
+        1.068,
+        1.1118
+      ],
+      "vendor_med_ms": 0.003752,
+      "cand_med_ms": 0.003419
+    },
+    "8192x4096": {
+      "windows": 12,
+      "median_ratio": 0.4041,
+      "min": 0.3956,
+      "max": 0.434,
+      "bootstrap95": [
+        0.398,
+        0.4095
+      ],
+      "vendor_med_ms": 0.055437,
+      "cand_med_ms": 0.137469
+    }
+  },
+  "protocol_note": "classify_window voids a window on the mere PRESENCE of a co-tenant PID (consistent with an earlier design choice), but on this shared machine light/transient co-tenants are everywhere and perturb nothing (canary flat). This over-blocks certification; per the shared-machine policy (another tenant's use is not unavailability; only actual interference matters) it should void on OBSERVED interference (canary>=1.15 or aicore peak high), not on presence alone."
+}
