@@ -38,6 +38,7 @@ def test_sealref_check_and_crosscheck_use_card_device(tmp_path, monkeypatch, kin
         call_impl=lambda problem, fn, inp, dps, device, **kwargs: calls.append(("call", device)) or [],
         judge_workloads=lambda problem, fn, dps, device: (calls.append(("judge", device)) or {"pass": True, "status": "PASS"}, []),
     )
+    monkeypatch.setitem(sys.modules, "torch_npu", types.ModuleType("torch_npu"))
     monkeypatch.setattr(mod, "_lb", lambda: fake)
     monkeypatch.setattr(mod, "_provenance", lambda: None)
     assert mod.check() == 0

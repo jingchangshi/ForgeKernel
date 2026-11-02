@@ -41,7 +41,11 @@ def _provenance() -> None:
 
 def _device(lb, problem):
     """Configure the same device as the card evaluator."""
-    return "npu" if lb.fk_dev.configure(lb.problem_device_kind(problem)) == "npu" else "cuda"
+    kind = lb.fk_dev.configure(lb.problem_device_kind(problem))
+    if kind == "npu":
+        # Register the backend even when TORCH_DEVICE_BACKEND_AUTOLOAD=0.
+        import torch_npu  # noqa: F401
+    return "npu" if kind == "npu" else "cuda"
 
 
 def check() -> int:
