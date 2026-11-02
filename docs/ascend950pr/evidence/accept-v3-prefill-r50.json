@@ -1,0 +1,35 @@
+{
+  "round": "50",
+  "date": "2026-11-02",
+  "topic": "structural tuning (deeper pipeline + double-buffered output) does not move the gated prefill ratio",
+  "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v3/kernel.py",
+  "change": "prefill scheduling moved from rows=8/stages=2/output single-buffered to rows=2/stages=3/output double-buffered; decode keeps its certified configuration",
+  "screening": "in one process, alternating with the vendor, the new scheduling screened ~12% better than the old one (0.727 vs 0.650 relative ratio), and output double buffering alone was ~4-8% better",
+  "gate": {
+    "status": "FAIL",
+    "point": 0.752623537,
+    "interval95": [
+      0.744494116,
+      0.759623736
+    ],
+    "medianCandidateMs": 0.081378,
+    "medianVendorMs": 0.059598,
+    "quietWindows": 15,
+    "contendedWindows": 0,
+    "precision": "pass",
+    "authenticity": "pass",
+    "raw": "docs/ascend950pr/evidence/accept-v3-prefill-r50-raw.json",
+    "sha256": "de63b2976a28471bec14eb9c9408d11dda127b01d49425e4b0bab65b54e00037"
+  },
+  "comparison": {
+    "previous_multiacc_gate": {
+      "point": 0.756556494,
+      "candidate_ms": 0.087757,
+      "vendor_ms": 0.064503
+    },
+    "conclusion": "the candidate itself got faster (87.8 -> 81.4 us) but the vendor reading in the newer window was faster too (64.5 -> 59.6 us), so the gated ratio is unchanged within noise. No improvement is established."
+  },
+  "lesson": "single-process alternating screening overstated a +12% gain that the paired gated window does not reproduce. Screening may only rank hypotheses; the gate decides.",
+  "structural_bound_observation": "for the candidate to reach parity its total must fall to roughly the vendor total (~60-70 us). Its DMA-in phase alone measured ~63-69 us and its vector work ~60 us, so parity needs both a faster DMA and better overlap - neither is delivered by scheduling parameters alone.",
+  "status": "prefill remains ~0.75 and fails; decode EXCEED from R48 stands"
+}
