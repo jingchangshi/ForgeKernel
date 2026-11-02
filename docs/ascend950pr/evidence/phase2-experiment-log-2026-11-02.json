@@ -85,5 +85,9 @@
     "decode": "CERTIFIED EXCEED 1.095x",
     "prefill": "0.388x (FAIL), structurally stuck on SimtVF",
     "objective": "partially achieved (decode); prefill parity needs the SimdVF rewrite"
+  },
+  "review_correction_2026_11_02": {
+    "status": "prior_conclusions_retracted",
+    "note": "This record is exploratory, not an acceptance result. The post-hoc co-tenant classifier change, sparse sampling and canary cannot prove absence of interference; 12 pairs in one process do not meet the planned >=15 pairs and >=3 processes. Do not claim EXCEED, a TileLang capability boundary, exhaustive tuning, or a proven mechanism from these measurements. Preserve original values as historical observations pending independent validation."
   }
 }
