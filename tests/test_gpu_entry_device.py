@@ -56,3 +56,22 @@ def test_npu_entry_does_not_touch_nvidia_clocks_or_install_cupti(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     assert not marker.exists()
     assert "task=cmd finished" in result.stdout
+
+
+def test_npu_ncu_task_does_not_launch_ncu(tmp_path):
+    import os
+    import subprocess
+
+    marker = tmp_path / "ncu-called"
+    fake = tmp_path / "ncu"
+    fake.write_text('#!/bin/sh\ntouch "$NCU_MARKER"\n')
+    fake.chmod(0o755)
+    entry = tmp_path / "gpu_entry.sh"
+    entry.write_text(_render("0"))
+    env = dict(os.environ, PATH=str(tmp_path) + os.pathsep + os.environ["PATH"],
+               NCU_MARKER=str(marker), SOL_ENV=str(tmp_path / "absent"))
+    result = subprocess.run(["bash", str(entry), "ncu"], env=env,
+                            text=True, capture_output=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not marker.exists()
+    assert "NCU unavailable for this device" in result.stdout

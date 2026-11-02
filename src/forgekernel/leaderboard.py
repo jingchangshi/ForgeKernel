@@ -825,6 +825,9 @@ export PYTHONPATH="$WORKSPACE:$WORKSPACE/eval:${{PYTHONPATH:-}}"
 export PYTHONUNBUFFERED=1
 export CUTE_DSL_ARCH="${{CUTE_DSL_ARCH:-{arch}}}"
 
+# Device capability used by generated reference wrappers.
+LB_NCU_AVAILABLE_DEFAULT="{install_cupti}"
+
 # Clocks. {clock_note}
 # A clock lock is GPU state, not process state: it outlives the job that set it and
 # slows every later tenant of this GPU. So every entry first clears whatever an
@@ -970,6 +973,10 @@ run_with_timeout() {{
 }}
 
 ncu_bounded() {{
+    if [ "$LB_NCU_AVAILABLE_DEFAULT" != "1" ]; then
+        echo "[gpu_entry.sh] NCU unavailable for this device; skipping profile"
+        return 0
+    fi
     set +e
     timeout --signal=KILL "$NCU_TIMEOUT" "$@"
     local rc=$?
