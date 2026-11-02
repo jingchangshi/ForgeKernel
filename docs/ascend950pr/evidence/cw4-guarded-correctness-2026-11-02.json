@@ -1,0 +1,37 @@
+{
+  "type": "correctness screening, not performance acceptance",
+  "candidate": "docs/ascend950pr/candidates/rmsnorm_cw4_guarded/kernel.py",
+  "candidate_sha256": "470a6bd8bf1d5256b5cb7bdd1ffcbfa26bf2d404d65d32a0e7209f763838a9af",
+  "judge": "rmsnorm-ascend-vendor_261102-192723-092c/check/judge.py",
+  "judge_sha256": "e606f9b6a4a3c1292d674c078f025b613871d606004e0e3ec016e3832cc4fc31",
+  "device": "physical NPU 1 (shared)",
+  "tolerance": 0.0078125,
+  "groups": [
+    "typical",
+    "outlier_channels",
+    "tiny_rows",
+    "wide_range_signed_w"
+  ],
+  "seeds": [
+    9101,
+    9102,
+    9103,
+    9104
+  ],
+  "normalized_errors": {
+    "64x4096": [
+      0.00030048076923076925,
+      0.000010119818652849741,
+      0.00011160714285714285,
+      0.00016191709844559586
+    ],
+    "8192x4096": [
+      0.002127659574468085,
+      0.001004016064257028,
+      0.0012135922330097086,
+      0.0002682403433476395
+    ]
+  },
+  "compiler_warning": "Requested coalesced_width=4 is incompatible with geometry-supported vector width 2; using 2 instead.",
+  "limitations": "Four new seeds per shape against the generated float32 judge; not independent acceptance, not full input coverage, and no performance timing."
+}
