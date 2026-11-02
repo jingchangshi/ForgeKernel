@@ -1,0 +1,43 @@
+{
+  "round": "82",
+  "date": "2026-11-03",
+  "topic": "CORRECTION: the SIMT-looking mnemonics are the model naming convention, not a compiler fallback",
+  "what_i_said_wrong": "I reported that the simulated instruction stream being SIMT_LDK / SIMT_STG / SIMT_FFMA suggested the kernel had been lowered to a SIMT path instead of SimdVF",
+  "evidence_against_that": {
+    "device_source": "device_kernel.asc for the same model contains 93 simd_inst calls (vlds_unpack, vcvt, vmula, vadd, vcadd, vdupv, vdiv, vsqrt, vadds, vmuls, vsts_norm), so the generated code is unambiguously SimdVF",
+    "executed_instruction_count": "the model executed 13925 instructions against an expected 15360 vector operations (4 rows x 6 iterations x (64 vld/convert/fma + 64 x 7 second-pass ops)), i.e. 91% of the expected body",
+    "conclusion": "the SimdVF body did run. SIMT_* is just how this camodel names instructions that execute on the RVEC pipes; it is not a lowering fallback."
+  },
+  "what_is_still_true": {
+    "no_vector_names": "the dump exposes no ISA-level vector mnemonics, so per-instruction analysis must be interpreted through the pipe column, not the mnemonic",
+    "code_regions_empty": "code_exe.csv is empty because the kernel carries no debug_line information, so code-level attribution is unavailable",
+    "dma_unmodelled": "MTE2 appears with a single instruction while the device reports DMA busy 27 percent on this model and 86-93 percent on the full kernel, so the simulator cannot be used to study the memory-bound behaviour"
+  },
+  "per_pipe_for_the_model": {
+    "RVECLD": {
+      "cycles": 172815,
+      "share": "51 percent",
+      "calls": 336
+    },
+    "RVECEX": {
+      "cycles": 91712,
+      "share": "27 percent",
+      "calls": 10822
+    },
+    "RVECST": {
+      "cycles": 59450,
+      "share": "17.6 percent",
+      "calls": 352
+    },
+    "SCALAR": {
+      "cycles": 8966,
+      "calls": 1020
+    },
+    "MTE2": {
+      "cycles": 478,
+      "calls": 1
+    }
+  },
+  "open_question": "vector loads carry 514 cycles each on average, which looks like stall attribution rather than a real per-instruction cost. The isolated copy microbenchmark shows the same signature (913 cycles per load), so this metric may be an artefact. It must be validated by a controlled A/B before any conclusion is drawn from it.",
+  "status": "tool runs and executes the real kernel; trustworthiness of its per-pipe numbers is still unestablished"
+}
