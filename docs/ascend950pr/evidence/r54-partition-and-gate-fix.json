@@ -1,0 +1,42 @@
+{
+  "round": "54",
+  "date": "2026-11-02",
+  "topic": "contiguous per-core partition improves gated prefill; gate authenticity false positive fixed",
+  "gate_fix": {
+    "problem": "a contended window in which the candidate never launched turned into an authenticity FAIL",
+    "fix": "when the candidate produced no measurement and no kernel of any kind was observed, authenticity is reported inconclusive and the run RETESTs; delegation evidence (static or a launched vendor operator) still FAILs",
+    "verification_in_production": "the next contended run reported authenticity pass instead of fail on the same candidate",
+    "tests": "gate suite 78 passed (4 new)",
+    "commits": [
+      "53b388a (gate)",
+      "72606cc (mirrored protocol)"
+    ]
+  },
+  "partition_result": {
+    "change": "per-core contiguous partitioning: base = (core*iters+step)*rows*d instead of the interleaved stride",
+    "gate": {
+      "status": "FAIL",
+      "point": 0.824756557,
+      "interval95": [
+        0.816336135,
+        0.852794043
+      ],
+      "medianCandidateMs": 0.079435,
+      "medianVendorMs": 0.064479,
+      "quietWindows": 15,
+      "contendedWindows": 0,
+      "decisionSampleWindows": 15,
+      "precision": "pass",
+      "authenticity": "pass",
+      "raw": "docs/ascend950pr/evidence/accept-v5-partition-r54-clean-raw.json",
+      "sha256": "a2ab94049de3a8211020b6ecce5ff25be474f4811b0138b96a76b88a66e5a438"
+    },
+    "comparison": {
+      "v4_interleaved": 0.75741416,
+      "v5_contiguous": 0.824756557,
+      "delta": "+8.9% in the gated ratio"
+    },
+    "conclusion": "contiguous partitioning is a real improvement under the gate. Prefill is still short of parity and needs roughly another 21%."
+  },
+  "status": "prefill now 0.825 (was 0.757); decode EXCEED 1.281 stands; objective not met"
+}
