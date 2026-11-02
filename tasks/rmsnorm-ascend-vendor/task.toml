@@ -1,0 +1,18 @@
+[task]
+language = "tilelang-ascend"
+arch = "ascend950pr"
+
+[reference]
+run = "reference/run.py:run"
+blackbox = true
+
+[agent]
+model = "auto/claude-sonnet-5-5"
+
+[target]
+ratio = 1.0
+timing = "device"
+
+[budget]
+hours = 2
+max_meta = 1
