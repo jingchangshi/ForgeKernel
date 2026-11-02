@@ -1,0 +1,44 @@
+{
+  "round": "70",
+  "date": "2026-11-02",
+  "topic": "manual pipeline schedules do not beat the automatic one",
+  "note": "T.Pipelined accepts explicit order/stage lists, so the load, compute and store statements were placed in separate pipeline stages by hand",
+  "variants": [
+    {
+      "name": "v30 order=[0,1,2] stage=[0,1,2], x2 y2",
+      "candidate_ms": 0.074305,
+      "vendor_ms": 0.061888,
+      "point": 0.830300216,
+      "quiet": 15
+    },
+    {
+      "name": "v31 order=[0,1,2] stage=[0,1,3], x2 y3",
+      "candidate_ms": 0.068896,
+      "vendor_ms": 0.057476,
+      "point": 0.837736007,
+      "quiet": 15
+    },
+    {
+      "name": "v32 order=[0,1,2] stage=[0,1,1], x3 y2",
+      "candidate_ms": 0.069104,
+      "vendor_ms": 0.057716,
+      "point": 0.828177146,
+      "quiet": 15
+    }
+  ],
+  "baseline": {
+    "name": "v23 automatic schedule",
+    "candidate_ms": "0.065149 / 0.069417 across two windows"
+  },
+  "conclusion": [
+    "all three manual schedules are correctness-clean and deterministic, and none beats the automatic schedule on candidate time",
+    "the ratios printed here (0.83) are higher than v23 earlier windows only because the vendor reading was slower in these windows (0.057-0.062 vs 0.050-0.053); the candidate time is what matters",
+    "a high ratio is not evidence of progress when it comes with a slow vendor reading"
+  ],
+  "hashes": {
+    "accept-v30-prefill-r70-raw.json": "9e6644da1560f68b0af1af825f72e413c86c2611e069e7f387224e11fcf24f19",
+    "accept-v31-prefill-r70-raw.json": "0d2d1363068d0a08006625fefa36e1e841f4288dd1df870a2c32e15df333756d",
+    "accept-v32-prefill-r70-raw.json": "f1ff502ca89d22a097f4c21b6b63e1b70c5fb5dfcadd8e49771a4471a4e1d13e"
+  },
+  "status": "v23 remains the best artifact; decode met, prefill not met"
+}
