@@ -1,0 +1,7 @@
+# Regenerable build caches and intermediate device artefacts stay local.
+# The small JSON receipts in artifacts/ are kept; the per-run subdirectories are not.
+cache/
+artifacts/*/
+__pycache__/
+*.pyc
+.pytest_cache/
