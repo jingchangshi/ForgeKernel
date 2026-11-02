@@ -51,7 +51,13 @@ BASIS_GRAPH = "cuda_graph"    # replay of a captured graph: the host is out of t
 # comes back as an EMPTY graph), and the same currency the FlashInfer-Bench harness
 # reports. Host-free for every check that exempts the graph basis.
 BASIS_CUPTI = "cupti_kernel_span"
-HOST_FREE_BASES = (BASIS_GRAPH, BASIS_CUPTI)
+# Ascend NPU: msprof per-kernel device duration from torch_npu.profiler (FFTS), divided
+# by the repeat count. The host is out of the loop by construction, exactly as for the
+# CUPTI span, so it is host-free for every check that exempts the graph basis. Leaving
+# it out would make the timing audit treat a pure device reading as a plain window and
+# could report it host-bound.
+BASIS_MSPROF = "msprof"
+HOST_FREE_BASES = (BASIS_GRAPH, BASIS_CUPTI, BASIS_MSPROF)
 _ROLE_FILENAMES = {ROLE_LIBRARY: BASELINE_FILENAME, ROLE_ARCHITECTURE: ARCH_BASELINE_FILENAME}
 
 # Bumped when a field changes meaning. A stale archive is refused rather than
@@ -271,7 +277,9 @@ class RefBaseline:
         if self.device_anchor_ms is not None:
             basis = {BASIS_GRAPH: "CUDA graph replay, host excluded",
                      BASIS_CUPTI: "CUPTI kernel span (per-launch device duration from the profiler), "
-                                  "host excluded"
+                                  "host excluded",
+                     BASIS_MSPROF: "msprof kernel span (per-launch device duration from the Ascend "
+                                   "profiler), host excluded",
                      }.get(self.device_anchor_basis, "pipelined amortized window")
             lines.append(f"- device median: **{self.device_anchor_ms} ms** [MEASURED, job "
                          f"{self.job or '?'}] ({basis} ≈ pure device — "
