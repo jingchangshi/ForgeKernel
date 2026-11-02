@@ -1,0 +1,24 @@
+{
+  "round": "59",
+  "date": "2026-11-02",
+  "topic": "two-phase scheduling is unsafe: a genuine race invalidates the v10 speed result",
+  "what_was_built": {
+    "v10": "two-phase: all rows reduce first, per-row scale parked in a shared buffer, then all rows scale",
+    "v11": "same with rows=2",
+    "v13": "attempt to keep scales in registers (blocked: the TileLang front end turns Python for-loops into device loops)",
+    "v14": "v10 plus an explicit version annotation on the scale buffer",
+    "v14b": "v14 forced to rows=2"
+  },
+  "measurements": {
+    "v10_rows4_correctness": "batch 256/512/1024/8192 all matched float64 (rel 2.8e-4 .. 2.0e-3); 10 repeats at 8192 were bit-identical (max diff 0.0)",
+    "v10_rows2_correctness": "batch 128 gave rel 1.0 and was NOT deterministic across 5 repeats; v11 rows=2 failed at 256/512/1024/8192 (rel 1.76 .. 3.95); v14b with a version annotation still failed (rel 23.4 and a NaN)",
+    "v10_gate": "one gated window: candidate 0.073269 ms, vendor 0.055201 ms, ratio 0.7519, 15/15 quiet"
+  },
+  "conclusion": [
+    "the two-phase shared-buffer construct has a real race, demonstrated by nondeterminism, so it is rejected",
+    "the 0.0733 ms candidate time comes from the rejected kernel and must not be quoted as a performance result",
+    "the single-phase per-row kernel (v5) remains the accepted prefill candidate at about 0.079 ms",
+    "v14 shows that annotating the buffer is not sufficient to make the construct safe"
+  ],
+  "implication": "the apparent ~8% win from two-phase scheduling is withdrawn; no partition, scheduling or two-phase variant has yet been shown to beat the single-phase kernel"
+}

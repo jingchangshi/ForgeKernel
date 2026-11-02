@@ -1,3 +1,10 @@
+REJECTED (R59): this two-phase kernel parks each row's inverse RMS in a shared buffer
+that is written in phase A and read in phase B inside a software-pipelined loop. That
+construct is racy: the rows=2 form produced wrong output at every tested batch size and
+was NONDETERMINISTIC (batch=128, rel=1.0 across repeats). The rows=4 form happened to be
+deterministic over 10 repeats, which is luck, not proof. Do not use this candidate; the
+single-phase per-row kernel (rmsnorm_simdvf_v5) is the accepted prefill candidate.
+
 """RMSNorm (bf16) on Ascend950PR, TileLang-Ascend SimdVF, v10.
 
 Two-phase schedule: every row's sum-of-squares runs back to back (phase A), the
