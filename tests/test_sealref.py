@@ -20,6 +20,31 @@ from forgekernel import leaderboard as lb
 from forgekernel import sealref
 from forgekernel.scaffold import main as scaffold_main
 
+@pytest.mark.parametrize("kind", ["npu", "cuda"])
+def test_sealref_check_and_crosscheck_use_card_device(tmp_path, monkeypatch, kind):
+    tool = Path(sealref.TOOL).read_text()
+    (tmp_path / "sealref.py").write_text(tool)
+    (tmp_path / "sealref.json").write_text('{}')
+    spec = importlib.util.spec_from_file_location("sealref_device_test", tmp_path / "sealref.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    calls = []
+    fake = types.SimpleNamespace(
+        load_problem=lambda: {"device": kind},
+        problem_device_kind=lambda problem: problem["device"],
+        fk_dev=types.SimpleNamespace(configure=lambda value: value),
+        _impl=lambda *args: (object(), False),
+        first_inputs=lambda problem, device: calls.append(("inputs", device)) or [],
+        call_impl=lambda problem, fn, inp, dps, device, **kwargs: calls.append(("call", device)) or [],
+        judge_workloads=lambda problem, fn, dps, device: (calls.append(("judge", device)) or {"pass": True, "status": "PASS"}, []),
+    )
+    monkeypatch.setattr(mod, "_lb", lambda: fake)
+    monkeypatch.setattr(mod, "_provenance", lambda: None)
+    assert mod.check() == 0
+    assert mod.crosscheck() == 0
+    assert calls == [("inputs", kind), ("call", kind), ("judge", kind)]
+
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_EVAL = REPO_ROOT / "src" / "forgekernel" / "card_template" / "eval"
 DEF = {

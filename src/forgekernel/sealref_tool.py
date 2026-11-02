@@ -39,13 +39,19 @@ def _provenance() -> None:
           f"languages {META.get('languages')}")
 
 
+def _device(lb, problem):
+    """Configure the same device as the card evaluator."""
+    return "npu" if lb.fk_dev.configure(lb.problem_device_kind(problem)) == "npu" else "cuda"
+
+
 def check() -> int:
     _provenance()
     lb = _lb()
     problem = lb.load_problem()
     fn, dps = lb._impl(problem, "ref")
-    inp = lb.first_inputs(problem, "cuda")
-    outs = lb.call_impl(problem, fn, inp, dps, "cuda", no_grad=True)
+    device = _device(lb, problem)
+    inp = lb.first_inputs(problem, device)
+    outs = lb.call_impl(problem, fn, inp, dps, device, no_grad=True)
     print("[sealref] check ok:", [tuple(o.shape) for o in outs])
     return 0
 
@@ -55,7 +61,8 @@ def crosscheck() -> int:
     lb = _lb()
     problem = lb.load_problem()
     fn, dps = lb._impl(problem, "ref")
-    verdict, _ = lb.judge_workloads(problem, fn, dps, "cuda")  # every workload of a group card
+    device = _device(lb, problem)
+    verdict, _ = lb.judge_workloads(problem, fn, dps, device)  # every workload of a group card
     print(f"[sealref] crosscheck {'PASS' if verdict['pass'] else 'FAIL'}: {verdict['status']}"
           + (f" — {verdict.get('error')}" if not verdict["pass"] else ""))
     return 0 if verdict["pass"] else 1
