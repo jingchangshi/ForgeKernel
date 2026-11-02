@@ -1,0 +1,53 @@
+{
+  "round": "58",
+  "date": "2026-11-02",
+  "topic": "CORRECTION: the partition change never improved the candidate; the apparent gain was vendor-side window variance",
+  "correction": {
+    "retracted_claim": "R54 reported that core-contiguous partitioning lifted gated prefill from 0.7574 to 0.8248 (+8.9%)",
+    "why_retracted": "the candidate median barely moved between those two runs (0.080056 -> 0.079435 ms, about 0.8%, i.e. noise), while the vendor median moved the other way (0.059085 -> 0.064479 ms, about +9%). The ratio difference is vendor variance, not a candidate improvement.",
+    "five_window_table": [
+      {
+        "variant": "v4 interleaved rows4 stages3 y2",
+        "point": 0.75741416,
+        "candidate_ms": 0.080056,
+        "vendor_ms": 0.059085,
+        "quiet": 15
+      },
+      {
+        "variant": "v5 contiguous rows4 stages3 y2",
+        "point": 0.824756557,
+        "candidate_ms": 0.079435,
+        "vendor_ms": 0.064479,
+        "quiet": 15
+      },
+      {
+        "variant": "v7 contiguous rows4 stages4 y2",
+        "point": 0.736438664,
+        "candidate_ms": 0.08293,
+        "vendor_ms": 0.061091,
+        "quiet": 15
+      },
+      {
+        "variant": "v8 contiguous rows4 stages2 y2",
+        "point": 0.690965213,
+        "candidate_ms": 0.080988,
+        "vendor_ms": 0.055421,
+        "quiet": 12
+      }
+    ],
+    "conclusion": "the candidate time is stable across all four gates (0.079-0.083 ms). The vendor time is not (0.055-0.065 ms, about +/-18%). A single window cannot characterise the ratio, and the best-looking window must not be quoted as the result."
+  },
+  "implication": {
+    "best_supported_statement": "prefill runs about 0.079-0.083 ms while the vendor runs 0.055-0.065 ms, so the ratio is roughly 0.69-0.83 depending on the window, typically near 0.70-0.75",
+    "gap": "to reach parity the candidate must fall to at most the vendor time, so prefill needs roughly 20-30% less time",
+    "what_is_not_proven": "no partition or scheduling variant has been shown to change the candidate time at all; decode EXCEED 1.2809 stands on its own gated window"
+  },
+  "raw": {
+    "v7": "docs/ascend950pr/evidence/accept-v7-r58-raw.json",
+    "v8": "docs/ascend950pr/evidence/accept-v8-r58-raw.json"
+  },
+  "evidence_hashes": {
+    "accept-v7-r58-raw.json": "b694b957202aca4ec667f2d5e4d8e1b8493bb4cb4c942a2a34aab56076f7b70c",
+    "accept-v8-r58-raw.json": "35eda1440fc1094212fe3fc0d578b988d04542aee7de43c1425a5863738b3df1"
+  }
+}
