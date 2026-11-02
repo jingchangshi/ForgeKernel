@@ -11,7 +11,7 @@
 | 验收目标 | 状态 | 实测 |
 |---|---|---|
 | ForgeKernel 在昇腾上跑通 | ✅ 达成 | build gate 8/8、smoke gate 9/9、真实 job `Succeeded` |
-| RMSNorm 精度正确 | ✅ 达成 | 全部 6 组合通过 P1/P2，最大偏差 5.525 ulp（bf16 一 ulp 为 2^-7） |
+| RMSNorm 精度检查 | ✅ 样本通过 | 候选在已测 6 个形状与输入族组合通过 P1/P2；故意采用 bf16 累加的负例误差为 2.053–5.525 ulp，并被拒绝 |
 | 设备计时可用于性能反馈 | ✅ 达成 | msprof 每核 device time，排除 cache-flush 核，AIV 管道归因可用 |
 | 预填充形态持平/超越厂商 | ❌ **未达成** | **0.3224×**，95% CI [0.3115, 0.3268] |
 | 解码形态持平/超越厂商 | ⚠️ 未分离 | **0.9939×**，95% CI [0.9711, 1.0260]（跨 1.0 → RETEST） |
@@ -167,7 +167,7 @@
 ## 7. 必须随结论一起引用的限制
 
 - **未达标**：预填充 0.32×，距"持平或超越厂商"的原始目标仍有约 3.1 倍差距。本报告不主张任何达标。
-- **无自动优化迭代记录**：ForgeKernel 的 judge→curriculum→student→KEEP/REVERT 闭环已打通，但**尚未跑出真实的迭代收益**。
+- **无自动优化迭代记录**：目前验证的是 ForgeKernel 设备 job 执行路径；judge→curriculum→student→KEEP/REVERT 自动优化闭环尚未完成端到端验证，**没有真实迭代收益记录**。
 - **共享机器**：所有测量都在有其他租户的卡上完成（实测到 `mwx1513432` 在同机跑 `ascend_eval`、`as2_llm` 占 99% AICore）。已用配对+剔除缓解，但无法完全消除。
 - **卡 0 健康状态为 `Alarm`**，正式性能测量应使用卡 1 并留窗口前后快照。
 - **窗口身份**：ForgeKernel `c4cac38`（dirty 0, 463 files）、AgentGates `a36486e`；两个 pinned 脚本哈希与 manifest 一致。若 `manifest.json` 或 pinned 脚本被改动，旧收据会立即 STALE——这是设计如此。
