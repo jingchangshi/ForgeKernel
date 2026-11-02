@@ -58,18 +58,24 @@
       "what": "drop the i<d predicates (d=4096 is a power of two, tile==d, so masking is redundant)",
       "result": "0.1362 vs 0.1360 ms; compiler already elides it",
       "keep": false
+    },
+    {
+      "id": "E11",
+      "what": "bf16 fragment instead of fp32 fragment (halve fragment memory, cast inline)",
+      "result": "slower 0.1505 vs 0.1379 ms; inline casts cost more than the saved memory",
+      "keep": false
     }
   ],
   "best_device_ms": 0.137,
   "best_speedup_vs_cw1_baseline": "1.19x",
   "standing": "with a clean vendor ~0.051 ms the best candidate is ~0.37x the vendor; this is a real step, NOT parity",
-  "exhausted": "row batch, pipeline depth, thread count, coalesced width, fragment vs streaming, w handling, memory layout, prefetch-after-cw4, hardware reduce_sum, predicate elimination",
+  "exhausted": "row batch, pipeline depth, thread count, coalesced width, fragment vs streaming, w handling, memory layout, prefetch-after-cw4, hardware reduce_sum, predicate elimination, bf16 fragment",
   "remaining_hypothesis": "the ~2.7x still missing is not any of these knobs; it needs a genuinely different implementation (vendor-level intrinsics / a different reduction+vectorisation strategy), or is out of reach with the current TileLang-Ascend surface",
   "certified_result": {
     "shape_decode": "64x4096 EXCEED 1.0951x bootstrap95 [1.0742,1.1217] (candidate ~9.5% FASTER than vendor)",
     "shape_prefill": "8192x4096 FAIL 0.3876x [0.3822,0.3956] (up from 0.32x start)"
   },
-  "conclusion_final": "ten experiments (E1-E10); only coalesced_width=4 moved the prefill device time (1.19x). The remaining ~2.5x gap is invariant to every tile/prefetch/thread/reduction/layout/w-handling/predicate knob tried. Decode is certified to EXCEED the vendor (1.095x); prefill is structurally stuck ~0.39x with the current TileLang-Ascend surface and, on this evidence, needs a vendor-level implementation to reach parity.",
+  "conclusion_final": "eleven experiments (E1-E11); only coalesced_width=4 moved the prefill device time. None of tile/prefetch/thread/reduction/layout/w-handling/predicate/fragment-dtype knobs help further. Combined with the capability-gap finding (TileLang official RMSNorm 0.69x vendor on fp32, no bf16 support), prefill bf16 parity needs a bf16-native vendor-level kernel - not reachable by tuning. Decode is certified EXCEED 1.095x.",
   "next_direction": {
     "why_the_gap_is_structural": "the kernel runs its arithmetic inside T.SimtVF (SIMT emulation). TileLang-Ascend also exposes T.SimdVF with T.simd.* micro-ops (pset/vld/vadds/vsts with PAT_VL8 masks) that map directly to the hardware vector instructions. The 3x vector-efficiency gap is consistent with SIMT-emulation overhead; cw=4 improved it 1.19x by vectorising memory access, but the compute still runs as SIMT.",
     "path_to_parity": "rewrite the per-row compute (load bf16 -> f32, square+vector-reduce, rsqrt, scale, store) in T.simd.* micro-ops inside T.SimdVF. This is a vendor-level implementation (manual mask/lane management), a large, error-prone effort, not a parameter change.",
