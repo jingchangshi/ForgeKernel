@@ -1,0 +1,70 @@
+{
+  "description": "Disjoint breakdown of windows classified contended, using the recorded witnesses and thresholds of the gate used for each run.",
+  "thresholds": {
+    "aicore_percent": 20,
+    "canary_inflation": 1.15
+  },
+  "runs": [
+    {
+      "raw": "accept-cw4-guarded-round33-raw.json",
+      "sha256": "e5c53b01ede66bd9f8ec9faa8e58dd5bf36d9292af15c2022c7c97da6b22d647",
+      "shapes": {
+        "64x4096": {
+          "status": "RETEST",
+          "decision_windows": 3,
+          "pid_only": 5,
+          "positive_witness": 7,
+          "other": 0
+        },
+        "8192x4096": {
+          "status": "RETEST",
+          "decision_windows": 3,
+          "pid_only": 1,
+          "positive_witness": 11,
+          "other": 0
+        }
+      }
+    },
+    {
+      "raw": "accept-cw4-guarded-independent-2-raw.json",
+      "sha256": "6c1f93bac06c50302e5c292ca26fc2700293c904c49d083ac5a4ded9cb94cd9e",
+      "shapes": {
+        "64x4096": {
+          "status": "RETEST",
+          "decision_windows": 4,
+          "pid_only": 3,
+          "positive_witness": 8,
+          "other": 0
+        },
+        "8192x4096": {
+          "status": "RETEST",
+          "decision_windows": 3,
+          "pid_only": 1,
+          "positive_witness": 11,
+          "other": 0
+        }
+      }
+    },
+    {
+      "raw": "accept-cw4-guarded-independent-3-raw.json",
+      "sha256": "b0b951b6101cccc0e90db4adaa71d7b2baa5e8ba559701ca019c577fdc671548",
+      "shapes": {
+        "64x4096": {
+          "status": "RETEST",
+          "decision_windows": 10,
+          "pid_only": 1,
+          "positive_witness": 4,
+          "other": 0
+        },
+        "8192x4096": {
+          "status": "RETEST",
+          "decision_windows": 4,
+          "pid_only": 1,
+          "positive_witness": 10,
+          "other": 0
+        }
+      }
+    }
+  ],
+  "interpretation": "PID-only is presence rather than proof of interference; a positive witness is a signal, not attribution to any process. Missing an observed signal does not prove absence of interference. All three reports remain RETEST and cannot establish performance parity."
+}
