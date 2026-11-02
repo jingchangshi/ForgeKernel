@@ -437,6 +437,8 @@ def _drive(run, task, machine, *, resuming: bool, harvest_only: bool) -> int:
                     + "\nEither the judge computes something else than the reference, or an "
                       "input group is not legal for it. Fix the files.")
         _say(f"calibration: no match (attempt {attempt}/{judge_mod.ATTEMPTS})")
+        for problem in cal.get("problems", [])[:20]:
+            _say(f"calibration detail: {problem}")
         _discard_trees(run, task)
         run.update(judge_written=False)
         rec = run.record()
@@ -522,6 +524,16 @@ def calibrate(task, op_dir: Path) -> dict:
     from forgekernel.loop.cli import RealBackend
     be = RealBackend(task.name, op_dir, None, "forge-judge", "forge-judge@localhost")
     log = be.submit_gpu(taskcard.BRANCH, CALIBRATE_MODE)
+    # Missing or malformed output is a job failure, not a numerical mismatch.
+    # Preserve the judge and the job tree so the environment can be repaired.
+    if "=== JSON ===" not in log:
+        raise RuntimeError("calibration job produced no result; inspect its environment:\n" + log[-2000:])
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(log.rsplit("=== JSON ===", 1)[1].strip())
+        if not isinstance(obj, dict) or not isinstance(obj.get("calibration"), dict):
+            raise ValueError("missing calibration block")
+    except (ValueError, IndexError) as exc:
+        raise RuntimeError("calibration job produced invalid output") from exc
     return parse_calibration(log)
 
 

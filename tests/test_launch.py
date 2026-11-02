@@ -15,6 +15,26 @@ from pathlib import Path
 import pytest
 
 from forgekernel import judge as judge_mod
+
+
+def test_calibration_job_failure_is_not_a_judge_mismatch(monkeypatch, tmp_path):
+    from forgekernel import launch
+    from forgekernel.loop.cli import RealBackend
+
+    monkeypatch.setattr(RealBackend, "submit_gpu", lambda *args: "ModuleNotFoundError: torch")
+    with pytest.raises(RuntimeError, match="calibration job produced no result"):
+        launch.calibrate(type("Task", (), {"name": "test"})(), tmp_path)
+
+
+def test_calibration_valid_numerical_failure_remains_a_mismatch(monkeypatch, tmp_path):
+    from forgekernel import launch
+    from forgekernel.loop.cli import RealBackend
+
+    monkeypatch.setattr(RealBackend, "submit_gpu", lambda *args:
+                        '=== JSON ===\n{"calibration": {"match": false, "problems": ["different"]}}')
+    result = launch.calibrate(type("Task", (), {"name": "test"})(), tmp_path)
+    assert result["match"] is False
+    assert result["problems"] == ["different"]
 from forgekernel import launch, taskcard
 from forgekernel.localenv import load_machine
 from forgekernel.runs import list_runs, new_run, open_run
