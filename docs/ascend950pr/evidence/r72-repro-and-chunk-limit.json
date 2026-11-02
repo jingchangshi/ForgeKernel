@@ -1,0 +1,41 @@
+{
+  "round": "72",
+  "date": "2026-11-02",
+  "topic": "the archive reproduces from a fresh cache; bigger DMA chunks are confirmed useless once the L2 policy is set",
+  "reproduction": {
+    "command": "the exact command documented in final-status.md, with a brand new empty cache directory",
+    "status": "EXCEED",
+    "point": 1.354979381,
+    "interval95": [
+      1.336322032,
+      1.393028964
+    ],
+    "candidate_ms": 0.002673,
+    "vendor_ms": 0.003581,
+    "quiet": 15,
+    "precision": "pass",
+    "authenticity": "pass",
+    "raw": "docs/ascend950pr/evidence/accept-v23-decode-r72-repro-raw.json",
+    "sha256": "77ef66883bb1f0f24b7a788988c5a8021dc8850ea8d800339d8bd8c9a3676f52",
+    "decode_windows_so_far": [
+      {
+        "point": 1.372594123,
+        "lower": 1.35605407
+      },
+      {
+        "point": 1.405644741,
+        "lower": 1.378313143
+      },
+      {
+        "point": 1.354979381,
+        "lower": 1.336322032
+      }
+    ]
+  },
+  "negative_result": {
+    "hypothesis": "reading 8 rows per DMA instead of 4 would raise read throughput (a pure read microbenchmark rises from 0.84 at 8KB to 2.13 TB/s at 128KB)",
+    "finding": "with the L2 policy set, a 32KB copy already reaches 1.757 TB/s and a 64KB copy reaches 1.725 TB/s, i.e. no further benefit from chunk size. The chunk-size curve only matters when the policy is unset.",
+    "consequence": "the last mechanical idea for closing the prefill gap is dropped; it would have cost a large rewrite for no gain"
+  },
+  "status": "decode certified on three independent windows; prefill remains about 20% short"
+}
