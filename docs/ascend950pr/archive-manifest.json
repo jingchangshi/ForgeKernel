@@ -1,44 +1,63 @@
 {
-  "generatedAt": "2026-11-02T14:57:35.867Z",
+  "generatedAt": "2026-11-02T15:09:18.492Z",
+  "round": 76,
+  "note": "regenerated after the R73/R75 documentation updates; every entry verified against the file on disk",
   "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v23/kernel.py",
   "verdicts": {
     "decode": {
       "status": "EXCEED",
-      "point": 1.372594123,
-      "interval95": [
-        1.35605407,
-        1.382943461
-      ],
-      "repeat": {
-        "point": 1.405644741,
-        "interval95": [
-          1.378313143,
-          1.449252368
-        ]
-      }
+      "windows": [
+        {
+          "point": 1.372594123,
+          "interval95": [
+            1.35605407,
+            1.382943461
+          ]
+        },
+        {
+          "point": 1.405644741,
+          "interval95": [
+            1.378313143,
+            1.449252368
+          ]
+        },
+        {
+          "point": 1.354979381,
+          "interval95": [
+            1.336322032,
+            1.393028964
+          ]
+        }
+      ]
     },
     "prefill": {
       "status": "FAIL",
-      "candidate_ms": [
-        0.065149,
-        0.069417
-      ],
-      "ratio": [
-        0.807361385,
-        0.81331163
+      "windows": [
+        {
+          "point": 0.807361385,
+          "candidate_ms": 0.065149
+        },
+        {
+          "point": 0.81331163,
+          "candidate_ms": 0.069417
+        },
+        {
+          "point": 0.771066795,
+          "candidate_ms": 0.078896
+        }
       ]
     }
   },
   "artifacts": [
     {
       "file": "final-status.md",
-      "bytes": 4766,
-      "sha256": "69ccf09db225e9eea683609583a025820dab24ae4a1d6ec5dd4e38c25af863a4"
+      "bytes": 6223,
+      "sha256": "859ab4b48da07729e99ccf9bfee9262c28a9644f7e438992a5d0110c6e84b870"
     },
     {
       "file": "d3-assessment.md",
-      "bytes": 5755,
-      "sha256": "e3d56fac292f8fdce1de7dd551d81c629a4ce1296b7c3d7e78b02a9f0fec711b"
+      "bytes": 6564,
+      "sha256": "a631009f4eeddbbadaa0040da3b91706d43fb6142db5aaa2dd370f937bab4418"
     },
     {
       "file": "evidence/accept-v23-prefill-r67-raw.json",
@@ -59,6 +78,11 @@
       "file": "evidence/accept-v23-prefill-r69-repeat-raw.json",
       "bytes": 12750,
       "sha256": "16dd59c8849da6a1ca00384f2d71e376cb5474df220692f85acf969d5d38af54"
+    },
+    {
+      "file": "evidence/accept-v23-decode-r72-repro-raw.json",
+      "bytes": 12636,
+      "sha256": "77ef66883bb1f0f24b7a788988c5a8021dc8850ea8d800339d8bd8c9a3676f52"
     },
     {
       "file": "evidence/r65-l2-breakthrough.json",
@@ -89,6 +113,26 @@
       "file": "evidence/r70-manual-pipeline.json",
       "bytes": 1787,
       "sha256": "f1bdb61972531879633043edbf59cff8cf165a8c17c39aa131de8d767915809e"
+    },
+    {
+      "file": "evidence/r71-v23-input-families.json",
+      "bytes": 1285,
+      "sha256": "5fd006b24108103da086f0c50bd6749ec496c7249cace7c970005e9740f796b4"
+    },
+    {
+      "file": "evidence/r72-repro-and-chunk-limit.json",
+      "bytes": 1593,
+      "sha256": "0e2d121b915451e0eba9136fee578609d35ac883725aad502f31b9413421a189"
+    },
+    {
+      "file": "evidence/r73-mixed-traffic.json",
+      "bytes": 1455,
+      "sha256": "36a62a451e787810e96927510fbe146f575e96b449f022fa496eb39200539a5f"
+    },
+    {
+      "file": "evidence/r74-variance-correction.json",
+      "bytes": 1829,
+      "sha256": "8d963bf0ef82cdbb9d676fe81b9edd8302cb43b00c03d66e85b8dfe2d74e9ec4"
     },
     {
       "file": "evidence/r59-two-phase-race.json",

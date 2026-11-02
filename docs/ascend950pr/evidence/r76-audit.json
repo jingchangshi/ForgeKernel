@@ -1,0 +1,10 @@
+{
+  "round": "76",
+  "date": "2026-11-02",
+  "topic": "documentation-to-evidence audit",
+  "checks": {
+    "numbers": "five quoted results compared field by field against their raw JSON files: all matched exactly, all 15/15 quiet, precision and authenticity pass on every one",
+    "manifest_hashes": "the first pass found two stale entries (final-status.md and d3-assessment.md had been updated in R73/R75), which is expected; the manifest was regenerated and every one of the 20 entries now matches the file on disk"
+  },
+  "conclusion": "the published numbers are traceable to raw evidence with no transcription drift"
+}
