@@ -1,0 +1,42 @@
+{
+  "round": "53",
+  "date": "2026-11-02",
+  "topic": "the gate can report an authenticity FAIL when the candidate measured nothing at all",
+  "observation": {
+    "gate_result": "authenticity fail: \"the candidate timed run launched no TileLang-generated kernel\"",
+    "context": "the same window was classified as fully contended (0 quiet of 15) and the candidate produced no timing at all",
+    "runtime_witness": {
+      "launchedTilelangKernel": false,
+      "vendorOpObserved": false,
+      "kernelNames": [
+        "AscendCL@aclrtGetDeviceCount",
+        "AscendCL@aclrtLaunchKernelWithHostArgs",
+        "AscendCL@aclrtSynchronizeDeviceWithTimeout"
+      ]
+    },
+    "compile": ".aibin artifacts were produced (2), so the archived source does compile to a device kernel"
+  },
+  "independent_check": {
+    "method": "loaded the archived v5 candidate directly and compared against CPU float64",
+    "results": [
+      {
+        "batch": 512,
+        "finite": true,
+        "rel": 0.000548,
+        "pass": true
+      },
+      {
+        "batch": 8192,
+        "finite": true,
+        "rel": 0.001,
+        "pass": true
+      }
+    ],
+    "conclusion": "the candidate is not delegating and does compute; the authenticity FAIL is a false positive produced when the device refused to launch under contention"
+  },
+  "why_it_matters": "as written, a contended window turns into an authenticity accusation. That both misstates the candidate and can mask the real cause (a failed launch). It should be inconclusive, not a fail.",
+  "proposed_narrow_fix": "when the candidate produced no measurement and no kernel of any kind was observed (no vendor operator either), report authenticity as inconclusive so the run RETESTs; keep the FAIL path for the case where a kernel was really launched and is not the candidate own, and for the vendor-operator case. This must be implemented with tests against the existing negative controls before use.",
+  "raw": "docs/ascend950pr/evidence/accept-v5-authenticity-falsepositive-r53-raw.json",
+  "sha256": "94eecad5a9961db6f99e454faa8c9072b9398282bcf5edf33eabf95dd4ff3b78",
+  "status": "no performance claim; decode EXCEED (v4) and prefill 0.757 both stand"
+}
