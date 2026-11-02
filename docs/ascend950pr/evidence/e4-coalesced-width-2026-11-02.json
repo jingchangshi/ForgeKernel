@@ -1,0 +1,49 @@
+{
+  "experiment": "E4: coalesced_width sweep on the compute loops",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "card": "npu:0 (util 0 at run)",
+  "method": "msprof device time, vendor bracketed in the same window",
+  "vendor_ms": 0.079538,
+  "vendor_samples": [
+    0.080569,
+    0.078508
+  ],
+  "caveat": "vendor absolute drifts on the shared card (0.051-0.092 this session); only within-window candidate comparisons are trusted",
+  "results": [
+    {
+      "name": "cw1_t256",
+      "coalesced_width": 1,
+      "threads": 256,
+      "device_ms": 0.162842,
+      "max_abs_err": 0.015625,
+      "note": "baseline (the genuine kernel uses coalesced_width=1)"
+    },
+    {
+      "name": "cw4_t256",
+      "coalesced_width": 4,
+      "threads": 256,
+      "device_ms": 0.137002,
+      "max_abs_err": 0.015625,
+      "speedup_vs_cw1": 1.19
+    },
+    {
+      "name": "cw8_t256",
+      "coalesced_width": 8,
+      "threads": 256,
+      "device_ms": 0.137049,
+      "max_abs_err": 0.015625,
+      "note": "no better than cw4"
+    },
+    {
+      "name": "cw4_t512",
+      "coalesced_width": 4,
+      "threads": 512,
+      "device_ms": 0.138484,
+      "max_abs_err": 0.015625,
+      "note": "no better than cw4/t256"
+    }
+  ],
+  "conclusion": "coalesced_width=4 is the first real lever: 0.1628 -> 0.1370 ms (1.19x) with identical max_abs_err. cw=1 (the current kernel) leaves the vector/memory access barely vectorised; cw=4 vectorises it. cw=8 buys nothing more.",
+  "decision": "KEEP coalesced_width=4."
+}

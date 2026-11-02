@@ -1,0 +1,63 @@
+{
+  "experiment": "E5: refine the cw=4 win (rows, stages, threads)",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "card": "npu:0",
+  "method": "msprof device time, vendor bracketed in the same window",
+  "vendor_ms": 0.074886,
+  "results": [
+    {
+      "name": "r2_cw4",
+      "rows": 2,
+      "cw": 4,
+      "threads": 256,
+      "ver": 2,
+      "stg": 2,
+      "device_ms": 0.161504,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "r4_cw4",
+      "rows": 4,
+      "cw": 4,
+      "threads": 256,
+      "ver": 2,
+      "stg": 2,
+      "device_ms": 0.138208,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "r6_cw4",
+      "rows": 6,
+      "cw": 4,
+      "threads": 256,
+      "ver": 2,
+      "stg": 2,
+      "device_ms": 0.134083,
+      "max_abs_err": 0.015625,
+      "caveat": "8192 is not divisible by 64*6=384, so a literal rows=6 leaves 128 rows uncovered unless remainder handling is added; NOT adopted until that is proven correct"
+    },
+    {
+      "name": "r4_cw4_v3s3",
+      "rows": 4,
+      "cw": 4,
+      "threads": 256,
+      "ver": 3,
+      "stg": 3,
+      "device_ms": 0.1384,
+      "max_abs_err": 0.015625,
+      "note": "deeper prefetch no help (matches E1)"
+    },
+    {
+      "name": "r4_cw4_t128",
+      "rows": 4,
+      "cw": 4,
+      "threads": 128,
+      "device_ms": 0.210202,
+      "max_abs_err": 0.03125,
+      "note": "too few threads, much worse"
+    }
+  ],
+  "conclusion": "rows=4 with cw=4 is the correct, divisible sweet spot at 0.1382 ms. rows=6 reads ~3% faster but is not divisible and not adopted. v3s3 and t128 do not help.",
+  "decision": "KEEP rows=4 + coalesced_width=4 (1.18x vs the cw=1 baseline). rows=6 deferred pending remainder handling."
+}
