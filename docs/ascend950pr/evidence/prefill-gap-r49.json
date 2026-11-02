@@ -1,0 +1,62 @@
+{
+  "round": "49",
+  "date": "2026-11-02",
+  "topic": "prefill gap analysis: where the remaining 32% sits, and why ad-hoc sweeps cannot resolve it",
+  "clean_window_attribution": {
+    "candidate": {
+      "dur_us": 106.819,
+      "vec": 0.5621,
+      "mte2": 0.6445,
+      "mte3": 0.3788
+    },
+    "vendor": {
+      "dur_us": 69.779,
+      "vec": 0.5268,
+      "mte2": 0.9053,
+      "mte3": 0.8162
+    },
+    "derived": {
+      "candidate_vec_busy_us": 60,
+      "vendor_vec_busy_us": 36.8,
+      "candidate_dma_in_us": 68.9,
+      "vendor_dma_in_us": 63.1
+    }
+  },
+  "interpretation": [
+    "the candidate does ~1.63x the vendor vector work, so instruction count is part of the gap",
+    "the candidate also overlaps its DMA worse (mte2 64.5% vs 90.5% of a longer window), so overlap is the other part",
+    "a perfectly overlapped candidate at this op count would land near 69 us, i.e. about parity; there is real headroom but not from a single lever"
+  ],
+  "sweep_result": {
+    "variants": [
+      "r8s2",
+      "r4s3",
+      "r4s4",
+      "r2s4"
+    ],
+    "ratios_vs_vendor": {
+      "r8s2": 0.6351,
+      "r4s3": 0.6458,
+      "r4s4": 0.6485,
+      "r2s4": 0.6034
+    },
+    "conclusion": "inconclusive - see the measurement discrepancy below"
+  },
+  "measurement_discrepancy": {
+    "gate_measurement": {
+      "candidate_ms": 0.087757,
+      "vendor_ms": 0.064503,
+      "ratio": 0.7566,
+      "note": "15 quiet paired windows, the authoritative number"
+    },
+    "ad_hoc_remeasurement": {
+      "candidate_ms": 0.10383,
+      "vendor_ms": 0.0714,
+      "ratio": 0.6877,
+      "note": "single fresh process, same archived candidate"
+    },
+    "conclusion": "ad-hoc scripts differ from the audited window by about 10% in ratio, so they cannot resolve a 2% variant difference and must not be used to claim an improvement or a ceiling. Only the gated paired window is authoritative."
+  },
+  "status": "no prefill improvement established this round; decode EXCEED from R48 stands",
+  "not_proven": "no variant is shown to beat r8s2; prefill parity is not reached"
+}
