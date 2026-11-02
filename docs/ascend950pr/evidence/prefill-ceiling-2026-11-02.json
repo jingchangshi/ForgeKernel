@@ -1,0 +1,21 @@
+{
+  "round": "8",
+  "date": "2026-11-02",
+  "topic": "why prefill cannot reach parity on this toolchain (op-count accounting)",
+  "analysis": {
+    "vector_ops_per_64_elements": {
+      "pass1": "vld + vcvt + vmula = 3",
+      "pass2": "vld + vcvt + vld(w f32) + vmul + vmul + vcvt(bf16) + vsts = 7",
+      "total": 10
+    },
+    "per_core_instruction_estimate": "8192 rows * 4096 elements * (10/64) / 64 cores = ~82,000 vector instructions per core; at ~1 per cycle and ~1.8 GHz this is already ~45 us of pure issue, consistent with the observed ~90 us vec-busy time",
+    "vendor_estimate": "if the vendor fuses bf16 load with an fp32 multiply-accumulate (implicit conversion), each pass is 2 ops instead of 3 and the scale pass ~4 instead of 7, giving ~6 per 64 elements -> ~49 us, consistent with its measured 50-72 us"
+  },
+  "toolchain_gap": [
+    "no implicit bf16->fp32 conversion in vld (vld never converts)",
+    "no bf16 multiply-accumulate into an fp32 accumulator (vmula with bf16 operands is rejected)",
+    "cube/matmul codegen is incompatible with the installed CANN (only 9.1 and 9.2 exist; the generated asc_* cube APIs are absent; the official example_gemm.py fails identically)"
+  ],
+  "conclusion": "prefill parity requires a TileLang/CANN capability this machine does not have. The 0.62x result is not a tuning shortfall; it is the op-count ceiling of the available instruction set.",
+  "not_proven": "nothing here changes the decode result; no acceptance has completed yet"
+}
