@@ -1,0 +1,25 @@
+{
+  "round": "73",
+  "date": "2026-11-02",
+  "topic": "the residual prefill gap is mixed-traffic efficiency, which TileLang does not expose",
+  "measurements": {
+    "isolated_read_TBps": 2.35,
+    "isolated_write_TBps": 3.08,
+    "copy_mixed_TBps": 1.76,
+    "our_kernel_mixed_TBps": 1.97,
+    "vendor_mixed_TBps": 2.42
+  },
+  "derivation": {
+    "our_kernel": "128 MB moved in 0.065 ms = 1.97 TB/s",
+    "vendor": "128 MB moved in 0.053 ms = 2.42 TB/s",
+    "gap": "the vendor sustains about 23% more mixed read+write throughput; that is the same size as the 20% time gap we see"
+  },
+  "interpretation": [
+    "the isolated rates show the path itself can do 2.35 TB/s reading and 3.08 TB/s writing, so neither direction is at a hard ceiling",
+    "when both directions run together the achievable aggregate falls to 1.76-1.97 TB/s, and the vendor reaches 2.42 TB/s under the same mixed load",
+    "64 cores each streaming a 32 KB read and a 32 KB write means 128 concurrent DRAM streams; the vendor presumably arranges its traffic with better locality",
+    "TileLang exposes no knob for DRAM page locality, stream count or copy engine selection beyond the L2 policy already applied"
+  ],
+  "what_this_rules_out": "further tuning of tile size, pipeline depth, buffer count, accumulator count or L2 policy, all of which are measured and none of which changes the mixed-traffic rate",
+  "status": "decode met; prefill 20% short and this is the reason"
+}
