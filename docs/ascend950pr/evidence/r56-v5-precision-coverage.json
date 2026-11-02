@@ -1,0 +1,27 @@
+{
+  "round": "56",
+  "date": "2026-11-02",
+  "topic": "v5 precision coverage across input families (no timing isolation needed)",
+  "prefill_8192x4096": {
+    "source": "independent acceptance gate (raw: evidence/accept-v5-partition-r54-clean-raw.json)",
+    "verdict": "pass",
+    "families": [
+      {"family": "normal", "ulp_cand": 1.0, "max_rel": 0.0078125, "max_rel_limit": 0.01171875},
+      {"family": "near_zero_rows", "ulp_cand": 0.9922, "max_rel": 0.007751938, "max_rel_limit": 0.011627907},
+      {"family": "outlier_channels", "ulp_cand": 0.9922, "max_rel": 0.007751938, "max_rel_limit": 0.01171875}
+    ]
+  },
+  "decode_64x4096": {
+    "source": "task judge input generator, CPU float64 truth, seeds 7301-7304",
+    "families": [
+      {"family": "typical", "error": 0.0, "pass": true},
+      {"family": "outlier_channels", "error": 4.36e-05, "pass": true},
+      {"family": "tiny_rows", "error": 2.39e-04, "pass": true},
+      {"family": "wide_range_signed_w", "error": 6.57e-05, "pass": true}
+    ],
+    "limit": 0.0078125,
+    "verdict": "pass"
+  },
+  "negative_result": "vsqz is a lane-squeeze op and vusqz is a mask prefix count; neither replaces square-and-accumulate, so no instruction-count reduction is available there",
+  "status": "precision is clean on both shapes and all tested families; performance still short on prefill"
+}
