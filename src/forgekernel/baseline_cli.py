@@ -208,10 +208,10 @@ def _measure(op: str, perf_mode: str, ncu_mode: str | None, *, repeat: int = 3,
       contention, not a different kernel. Taking a single sample there would put
       target_ms 19% loose and let the student stop while genuinely far from ref.
 
-    The fastest sample is the honest one: the ref is a fixed library kernel, so
-    what it does when nothing else is competing for the node is its real number
-    and everything slower is an artifact of when we happened to ask. Every sample
-    is returned so the archive can record the spread rather than hide it.
+    The existing anchor policy selects the fastest end-to-end sample. That is a
+    heuristic, not proof of uncontended execution or of a representative device
+    duration. Every sample is returned so the archive can record the spread.
+    Independent paired measurements are needed for performance acceptance.
 
     Returns (perf_stdout_of_best, ncu_csv, job_of_best, all_samples, parsed_runs) —
     parsed_runs is every timing-yielding run's parse_ref_stdout dict, in run order,
@@ -257,8 +257,9 @@ def _measure(op: str, perf_mode: str, ncu_mode: str | None, *, repeat: int = 3,
         print(f"[baseline] {len(samples)} samples, spread {spread:.1f}% "
               f"(min {min(samples)}, max {max(samples)}) — anchoring to the fastest")
         if spread > 10:
-            print("[baseline] NOTE: >10% spread suggests node contention; the fastest "
-                  "sample is the ref's real number but consider re-running if it looks off")
+            print("[baseline] NOTE: >10% spread indicates variable measurements; "
+                  "the selected fastest sample is not proof of an uncontended reference. "
+                  "Repeat and use paired measurements for acceptance.")
 
     ncu_out = ""
     if ncu_mode:
