@@ -1,0 +1,37 @@
+{
+  "round": "69",
+  "date": "2026-11-02",
+  "topic": "decode repeats its EXCEED on an independent window; five x-buffers is worse",
+  "decode_repeat": {
+    "status": "EXCEED",
+    "point": 1.405644741,
+    "interval95": [
+      1.378313143,
+      1.449252368
+    ],
+    "candidate_ms": 0.00264,
+    "vendor_ms": 0.00367,
+    "quiet": 15,
+    "previous_window": {
+      "point": 1.372594123,
+      "interval95": [
+        1.35605407,
+        1.382943461
+      ]
+    },
+    "reading": "two independent windows both put the lower bound well above 1.0 (1.3561 and 1.3783), so the decode result is repeatable and not a single lucky window"
+  },
+  "v29": {
+    "candidate": "five x-buffers, stages=5",
+    "candidate_ms": 0.080879,
+    "vendor_ms": 0.062162,
+    "point": 0.76111883,
+    "quiet": 15,
+    "verdict": "worse than v23, so four x-buffers remains the right depth"
+  },
+  "hashes": {
+    "accept-v23-decode-r69-repeat-raw.json": "9df684a5801cda67c6e54d8b49bc542c21d286115bd60c7f91499aa7562ce3b1",
+    "accept-v29-prefill-r69-raw.json": "f5b4cfc20da7aadd665d5e8e8e53758af1740869359edbb66beeb8ff05e6248c"
+  },
+  "status": "decode certified and repeatable; prefill best remains v23 at 0.0651 ms"
+}
