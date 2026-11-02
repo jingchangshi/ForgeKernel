@@ -1,0 +1,16 @@
+# rmsnorm-ascend -- the same RMSNorm task, as a TileLang-Ascend kernel on an Ascend950PR
+# NPU. Copies tasks/rmsnorm shape for shape; only the language and the target device
+# differ. The PyTorch reference runs unchanged on the NPU, so the judge and the
+# tolerance calibration are the same construction as on the CUDA task.
+
+[task]
+language = "tilelang-ascend"
+arch     = "ascend950pr"
+
+[reference]
+run    = "reference/run.py:run"
+source = "reference"
+
+[budget]
+hours    = 2
+max_meta = 1
