@@ -1,0 +1,56 @@
+{
+  "round": "66",
+  "date": "2026-11-02",
+  "topic": "v21 is the best single artifact: NORMAL_FV on every DMA path",
+  "results": {
+    "decode": {
+      "status": "EXCEED",
+      "point": 1.355945086,
+      "interval95": [
+        1.334229898,
+        1.369967152
+      ],
+      "candidate_ms": 0.002631,
+      "vendor_ms": 0.003549,
+      "quiet": 15,
+      "precision": "pass",
+      "authenticity": "pass",
+      "raw": "docs/ascend950pr/evidence/accept-v21-decode-r66-raw.json"
+    },
+    "prefill": {
+      "status": "FAIL",
+      "point": 0.772045293,
+      "interval95": [
+        0.757971607,
+        0.803239138
+      ],
+      "candidate_ms": 0.069017,
+      "vendor_ms": 0.053359,
+      "quiet": 15,
+      "precision": "pass",
+      "authenticity": "pass",
+      "raw": "docs/ascend950pr/evidence/accept-v21-prefill-r66-raw.json"
+    }
+  },
+  "decode_progression": {
+    "v4": 1.280871894,
+    "v16": 1.316035195,
+    "v20": 1.349687,
+    "v21": 1.355945086
+  },
+  "prefill_candidate_time_across_windows": [
+    "0.064779 (v18)",
+    "0.069017 (v21)",
+    "0.069899 (v20)"
+  ],
+  "observations": [
+    "decode has improved monotonically with the L2 work: 1.281 -> 1.316 -> 1.350 -> 1.356, all certified EXCEED",
+    "prefill candidate time varies by about 7% between windows (0.0648-0.0699), so differences under that size are not improvements",
+    "the microbenchmark winner on the read path (NORMAL_LV, 2.35 TB/s standalone) made the kernel slower; only the gate can rank policy choices"
+  ],
+  "attribution_note": "a profiling pass during contention gave absolute times inflated for both sides (v21 94.6 us vs vendor 79.8 us) but still shows our DMA about 18% slower than the vendor, so the gap remains on the movement side",
+  "hashes": {
+    "accept-v21-prefill-r66-raw.json": "31c989b647c0deee98a5597918611fc344d2bb38c5371f8ac7ada03afc470f0c",
+    "accept-v21-decode-r66-raw.json": "5bce42e8ff085e6cb713dec381eafffa5c11a7b8557341b7f1e669fdca823e87"
+  }
+}
