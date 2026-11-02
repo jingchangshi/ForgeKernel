@@ -1,0 +1,51 @@
+{
+  "round": "58",
+  "date": "2026-11-02",
+  "topic": "all queued prefill variants judged; candidate time is what matters, not the ratio",
+  "gate_validated_prefill": [
+    {
+      "variant": "v4 rows4 stages3 y2 interleaved",
+      "candidate_ms": 0.080056,
+      "vendor_ms": 0.059085,
+      "point": 0.75741416,
+      "quiet": 15
+    },
+    {
+      "variant": "v5 rows4 stages3 y2 contiguous",
+      "candidate_ms": 0.079435,
+      "vendor_ms": 0.064479,
+      "point": 0.824756557,
+      "quiet": 15
+    },
+    {
+      "variant": "v7 rows4 stages4 y2 contiguous",
+      "candidate_ms": 0.08293,
+      "vendor_ms": 0.061091,
+      "point": 0.736438664,
+      "quiet": 15
+    },
+    {
+      "variant": "v8 rows4 stages2 y2 contiguous",
+      "candidate_ms": 0.080988,
+      "vendor_ms": 0.055421,
+      "point": 0.690965213,
+      "quiet": 12
+    },
+    {
+      "variant": "v9 rows8 stages2 y1 contiguous",
+      "candidate_ms": 0.086162,
+      "vendor_ms": 0.052297,
+      "point": 0.606856898,
+      "quiet": 15
+    }
+  ],
+  "findings": [
+    "the best candidate time seen is v5 at 0.0794 ms and v4 at 0.0801 ms; the difference between them is noise",
+    "rows=8 with a single-buffered output is clearly worse (0.0862 ms), which is consistent with output DMA serialising against vector work",
+    "the vendor time across these five gated windows spans 0.0523-0.0645 ms, so quoting any single ratio overstates precision",
+    "scheduling and partitioning are exhausted: five variants, all within noise of each other except the two that are worse"
+  ],
+  "implication": "prefill needs the candidate below roughly the vendor time, so 20-35% off 0.079 ms. With about 10 vector ops per 64 elements and no available fusion primitive, and with vector busy near 60 us and DMA-in near 65-69 us, neither scheduling nor partitioning closes that.",
+  "status": "decode EXCEED 1.2809 stands; prefill not met; v10 two-phase still queued for a clean window",
+  "raw": "docs/ascend950pr/evidence/accept-v9-r58-raw.json"
+}
