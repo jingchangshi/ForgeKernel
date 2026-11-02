@@ -44,5 +44,6 @@
     }
   },
   "conclusion": "SimdVF improved the ratio from ~0.39x (SimtVF) to ~0.622x, but the two-pass vector implementation has a structural ceiling near 0.8x. Reaching 1.0 needs the square-and-reduce work moved off the vector pipe (e.g. cube/matmul dot product with fp32 accumulate) or a different algorithm.",
-  "not_proven": "no witness-audited measurement; vendor reading window varies (0.068-0.072 here); no acceptance; no per-shape parity"
+  "not_proven": "no witness-audited measurement; vendor reading window varies (0.068-0.072 here); no acceptance; no per-shape parity",
+  "review_correction": "The historical interpretation claiming a proven bottleneck, performance ceiling, compiler-wide limitation, or cross-run speedup is retracted. The measurements were exploratory and insufficiently paired; profiler utilization is not a proof of a hard bound. The archived candidate initially used an invalid dtype spelling and must be verified separately. Preserve numerical observations as historical only."
 }

@@ -21,5 +21,6 @@
     "no adversarial-witness acceptance run",
     "vendor reading varies by window (0.068-0.072 ms here vs ~0.05 earlier)"
   ],
-  "not_proven": "no per-shape parity; no acceptance; readings are a single process and not witness-audited"
+  "not_proven": "no per-shape parity; no acceptance; readings are a single process and not witness-audited",
+  "review_correction": "The historical interpretation claiming a proven bottleneck, performance ceiling, compiler-wide limitation, or cross-run speedup is retracted. The measurements were exploratory and insufficiently paired; profiler utilization is not a proof of a hard bound. The archived candidate initially used an invalid dtype spelling and must be verified separately. Preserve numerical observations as historical only."
 }

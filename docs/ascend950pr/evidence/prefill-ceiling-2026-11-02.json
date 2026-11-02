@@ -17,5 +17,6 @@
     "cube/matmul codegen is incompatible with the installed CANN (only 9.1 and 9.2 exist; the generated asc_* cube APIs are absent; the official example_gemm.py fails identically)"
   ],
   "conclusion": "prefill parity requires a TileLang/CANN capability this machine does not have. The 0.62x result is not a tuning shortfall; it is the op-count ceiling of the available instruction set.",
-  "not_proven": "nothing here changes the decode result; no acceptance has completed yet"
+  "not_proven": "nothing here changes the decode result; no acceptance has completed yet",
+  "review_correction": "The historical interpretation claiming a proven bottleneck, performance ceiling, compiler-wide limitation, or cross-run speedup is retracted. The measurements were exploratory and insufficiently paired; profiler utilization is not a proof of a hard bound. The archived candidate initially used an invalid dtype spelling and must be verified separately. Preserve numerical observations as historical only."
 }

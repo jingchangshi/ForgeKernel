@@ -1,28 +1,30 @@
 """RMSNorm (bf16) on Ascend950PR as a TileLang-Ascend SimdVF kernel (v2).
 
 Per-shape rows-per-core: 8 for the prefill shape (8192), 1 for decode (64).
-Measured in a single-process paired window: decode ~1.29x the vendor,
-prefill ~0.62x. Only decode is expected to clear the target; prefill has a
-documented vector-pipe ceiling. This has NOT been independently accepted yet.
+Exploratory timings were collected in one process and have not established a
+performance result. No vector-pipe ceiling or per-shape parity is proven.
+Independent acceptance must determine correctness and performance.
 """
 import torch
 import tilelang
 import tilelang.ascend.language as T
 
-BF = "bf16"
+BF = "bfloat16"
 N_CORES = 64
 CH = 64
 
 
 def _rows_per_core(batch):
     for rows in (8, 4, 2, 1):
-        if batch % (N_CORES * rows) == 0:
+        if batch > 0 and batch % (N_CORES * rows) == 0:
             return rows
     raise ValueError("batch must be divisible by 64; remainder handling is unsupported")
 
 
 def _build(batch, d):
     rows = _rows_per_core(batch)
+    if d <= 0 or d % CH:
+        raise ValueError("width must be positive and divisible by 64")
     NCH = d // CH
     iters = batch // (N_CORES * rows)
     total = batch * d
