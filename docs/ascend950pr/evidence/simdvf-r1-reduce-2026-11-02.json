@@ -1,0 +1,17 @@
+{
+  "round": 1,
+  "date": "2026-11-02",
+  "topic": "SimdVF reduction and bf16 load, resolved by probe",
+  "card": "shared NPU 1",
+  "results": {
+    "bf16_load": "vld(x_ub, dist=\"UNPK_B16\") + vcvt(v,\"float32\",part=0) over 64 bf16 elements equals torch exactly",
+    "reduce_to_scalar": "64 f32: vld -> vmul -> 6x vcadd(pset(32)) -> vsts lane0 equals torch sum(x*x) exactly (85344.0)",
+    "pset_parameter": "pset takes ELEMENT WIDTH in bits (32 for f32), not a lane count; pset(16)/pset(8) are invalid elwidth and fail to resolve"
+  },
+  "implications": [
+    "the two hardest unknowns of the SimdVF path are now resolved: bf16 load/cast and full cross-lane reduction",
+    "a per-row sum of squares can be built as: accumulate squares per lane over D/64 chunks with vmula, then a 6-step vcadd chain to a scalar",
+    "remaining unknowns: bf16 vsts write-back dist, scalar broadcast of rstd, reduction instruction cost, and final performance"
+  ],
+  "not_proven": "no RMSNorm kernel yet; no timing; no parity claim"
+}
