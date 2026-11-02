@@ -315,6 +315,10 @@ def _report_host_bound(baseline: RefBaseline) -> None:
     from forgekernel.timing_audit import reference_warning
     verdict = baseline.host_bound
     if not verdict.measured:
+        if baseline.device_anchor_basis in HOST_FREE_BASES and baseline.ms_device_plain is None:
+            print(f"[baseline] NOTE: the archived {baseline.device_anchor_basis} reading is "
+                  "host-free; no plain device window was reported for a host-bound audit.")
+            return
         print("[baseline] NOTE: the ref script reports no host_enqueue_ms — the device "
               "window's precondition (host enqueues faster than the device drains) is "
               "UNCHECKED for this reference. Have the ref script use "
