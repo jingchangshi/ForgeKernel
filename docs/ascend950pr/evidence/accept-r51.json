@@ -1,0 +1,79 @@
+{
+  "round": "51",
+  "date": "2026-11-02",
+  "topic": "single-artifact gate result (v4) and an inconclusive partition experiment (v5)",
+  "v4": {
+    "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v4/kernel.py",
+    "decode": {
+      "status": "EXCEED",
+      "point": 1.280871894,
+      "interval95": [
+        1.246980779,
+        1.308715533
+      ],
+      "candidate_ms": 0.002777,
+      "vendor_ms": 0.003596,
+      "quiet": 15,
+      "precision": "pass",
+      "authenticity": "pass"
+    },
+    "prefill": {
+      "status": "FAIL",
+      "point": 0.75741416,
+      "interval95": [
+        0.750699757,
+        0.764800569
+      ],
+      "candidate_ms": 0.080056,
+      "vendor_ms": 0.059085,
+      "quiet": 15,
+      "precision": "pass",
+      "authenticity": "pass"
+    }
+  },
+  "scheduling_plateau": {
+    "configs": [
+      {
+        "name": "multiacc r8/s2/y1",
+        "prefill_point": 0.756556494,
+        "candidate_ms": 0.087757
+      },
+      {
+        "name": "v3 r2/s3/y2",
+        "prefill_point": 0.752623537,
+        "candidate_ms": 0.081378
+      },
+      {
+        "name": "v4 r4/s3/y2",
+        "prefill_point": 0.75741416,
+        "candidate_ms": 0.080056
+      }
+    ],
+    "conclusion": "three scheduling variants all land at 0.75 within the gate. The candidate got ~9% faster in absolute terms but the vendor reading in the newer windows was also faster, so the ratio did not move. Scheduling parameters are exhausted as a lever."
+  },
+  "v5_partition": {
+    "change": "per-core contiguous partition (base = (core*iters+step)*rows*d) instead of the interleaved stride, hypothesised to raise DMA efficiency",
+    "attempts": [
+      {
+        "status": "RETEST",
+        "quiet": 10,
+        "total": 15
+      },
+      {
+        "status": "RETEST",
+        "quiet": 1,
+        "total": 15,
+        "pid_only": 7,
+        "positive_signal": 7
+      }
+    ],
+    "conclusion": "inconclusive - real external contention appeared on the measurement device during both attempts. No claim is made about the partition change."
+  },
+  "evidence_hashes": {
+    "accept-v4-prefill-r51-raw.json": "1cdc1523ed3a606c95fcae447922bc87dc1f9b32fdb799b3b247fd080ae2837d",
+    "accept-v4-decode-r51-raw.json": "e17a839024803e6e1bc8f29ea739f3e59413c9e5defb1e4a0256916fa1e62059",
+    "accept-v5-prefill-r51-retest-raw.json": "a8d6609edd67e77695039ddb395d4fa238e4f16dfb0a2001b2a70795cbeb5714"
+  },
+  "status": "decode is certified EXCEED on a single artifact; prefill is 0.757 and fails; the partition hypothesis is untested",
+  "next": "re-measure v5 when the device is genuinely quiet; if the partition does not help, the remaining structural lever is DMA efficiency itself"
+}
