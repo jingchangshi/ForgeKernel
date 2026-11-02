@@ -1,0 +1,25 @@
+{
+  "round": "55",
+  "date": "2026-11-02",
+  "topic": "measurement environment saturated by other users; variants prepared and queued behind idle-window waits",
+  "environment": {
+    "observed_at": "2026-11-02T21:03+08:00",
+    "device0": [
+      "user w008899: python -m pytest pytest_ut",
+      "user h009213: kernel_launch tests"
+    ],
+    "device1": [
+      "user k600766: pytest"
+    ],
+    "note": "three distinct external users active; gate runs in this period all returned RETEST with no measurement at all"
+  },
+  "attempts_voided": "v6 (rows=2), v7 (rows=4 stages=4), v8 (rows=4 stages=2) each returned RETEST with 0 quiet windows and no readings - environmental, not candidate",
+  "prepared": {
+    "v6": "contiguous, rows=2, stages=3, output double-buffered",
+    "v7": "contiguous, rows=4, stages=4, output double-buffered",
+    "v8": "contiguous, rows=4, stages=2, output double-buffered",
+    "v9": "contiguous, rows=8, stages=2, output single-buffered (largest tile the UB budget allows)"
+  },
+  "automation": "docs/ascend950pr/scripts/sweep_variants.sh waits for three consecutive idle polls and gates each variant, retrying up to six times",
+  "status": "prefill best remains 0.8248 (v5); decode EXCEED 1.2809 (v4) stands; nothing new measured this round"
+}
