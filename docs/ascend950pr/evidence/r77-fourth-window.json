@@ -1,0 +1,50 @@
+{
+  "round": "77",
+  "date": "2026-11-02",
+  "topic": "fourth independent prefill window: the best ratio so far is still 0.85",
+  "window": {
+    "status": "FAIL",
+    "point": 0.850226523,
+    "interval95": [
+      0.829377796,
+      0.882975699
+    ],
+    "candidate_ms": 0.076078,
+    "vendor_ms": 0.064622,
+    "quiet": 15,
+    "precision": "pass",
+    "authenticity": "pass",
+    "raw": "docs/ascend950pr/evidence/accept-v23-prefill-r77-w4-raw.json",
+    "sha256": "2ec936db3e2029048d4fc5e25b3f2a2fcc2d2b6d14e7c4cfcfb04bce8c0e0386"
+  },
+  "all_four_windows": [
+    {
+      "point": 0.807361385,
+      "cand": 0.065149,
+      "vendor": 0.052974
+    },
+    {
+      "point": 0.81331163,
+      "cand": 0.069417,
+      "vendor": 0.056349
+    },
+    {
+      "point": 0.771066795,
+      "cand": 0.078896,
+      "vendor": 0.061855
+    },
+    {
+      "point": 0.850226523,
+      "cand": 0.076078,
+      "vendor": 0.064622
+    }
+  ],
+  "statistics": {
+    "ratio_min": 0.771066795,
+    "ratio_max": 0.850226523,
+    "ratio_mean": 0.810492,
+    "lower_bound_max": 0.829377796,
+    "slowdown_range": "15-23%"
+  },
+  "reading": "across four clean windows the ratio never reaches 1.0 and the best lower bound is 0.829, so prefill fails the acceptance criterion in every window. The spread of the ratio (0.771-0.850) is the device drift already documented in R74."
+}
