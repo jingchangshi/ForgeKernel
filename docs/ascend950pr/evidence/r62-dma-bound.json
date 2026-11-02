@@ -1,0 +1,61 @@
+{
+  "round": "62",
+  "date": "2026-11-02",
+  "topic": "v15 is DMA-bound now; deeper buffering does not help",
+  "attribution_after_v15": {
+    "v15": {
+      "dur_us": 88.1,
+      "vec": 0.4649,
+      "mte2": 0.8651,
+      "mte3": 0.878
+    },
+    "vendor": {
+      "dur_us": 75.3,
+      "vec": 0.4939,
+      "mte2": 0.9275,
+      "mte3": 0.8468
+    },
+    "derived": {
+      "v15_vec_busy_us": 41,
+      "vendor_vec_busy_us": 37.2,
+      "v15_mte2_us": 76.2,
+      "vendor_mte2_us": 69.9,
+      "v15_mte3_us": 77.4,
+      "vendor_mte3_us": 63.8
+    },
+    "reading": "the vector work is now within about 10% of the vendor (it used to be 63% more). Both DMA directions are about 0.84 TB/s against the vendor 0.91-1.0 TB/s, so the remaining gap is DMA throughput, not arithmetic."
+  },
+  "experiments": [
+    {
+      "variant": "v16 four x-buffers",
+      "candidate_ms": 0.074509,
+      "vendor_ms": 0.052669,
+      "point": 0.715004791,
+      "quiet": 15
+    },
+    {
+      "variant": "v17 three y-buffers",
+      "candidate_ms": 0.08058,
+      "vendor_ms": 0.054986,
+      "point": 0.682750079,
+      "quiet": 15
+    },
+    {
+      "variant": "v15 baseline",
+      "candidate_ms": 0.075503,
+      "vendor_ms": 0.06206,
+      "point": 0.830155683,
+      "quiet": 15
+    }
+  ],
+  "conclusion": [
+    "v16 is at best 1% below v15, which is inside noise; v17 is clearly worse",
+    "deeper prefetch or output buffering does not close the DMA gap",
+    "the quoted ratio swings from 0.68 to 0.83 across these three windows while the candidate time stays in a narrow band, because the vendor reading itself ranges 0.0527-0.0621 ms"
+  ],
+  "status": "prefill best candidate time about 0.0745-0.0755 ms; vendor 0.052-0.062; parity would need roughly 30% off the candidate at the vendor best",
+  "hashes": {
+    "v16": "8514a95b5c446db70176a233fab5818dc69ee86752f2d4636d0b36590c602947",
+    "v17": "7a57b968ce4ccc8fd4f140e6dcf6c5f04db1fda839249422e05d1343f6816e81"
+  }
+}
