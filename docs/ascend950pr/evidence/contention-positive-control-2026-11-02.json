@@ -1,0 +1,222 @@
+{
+ "schema": 1,
+ "measuredOn": "2026-11-02T13:05:24+0800",
+ "purpose": "controlled positive control: run the same unchanged candidate on a clean card and again under sustained contention, to test whether the witnesses detect it and whether pairing absorbs it.",
+ "acceptScriptSha256": "23e34233c59bc9851b889ce4f566e29260cd110e4e758d2e157ecbb1248d7242",
+ "device": "1 (Ascend950PR, Health OK)",
+ "contentionMethod": {
+  "how": "a separate background process ran a sustained NPU multiply loop on the same device for 180 s, so the measured card was genuinely contended by a real process. This is a controlled experiment, not a fabricated observation: the contention was real, and the witnesses had to find it on their own.",
+  "loaderPid": 147892,
+  "loader": "scripts/npu_background_load.py 1 /tmp/tenant.pid 180",
+  "significance": "This PID was briefly mistaken by the Lead for a third-party tenant. It was OURS. Recorded here so the attribution error does not survive in the evidence.",
+  "deviceAicoreDuringRun": 99
+ },
+ "shapes": {
+  "8192x4096": {
+   "quietRun": {
+    "verdict": "FAIL",
+    "quietWindows": 10,
+    "contendedWindows": 0,
+    "pointSpeedup": 0.322401597,
+    "interval95": [
+     0.311470516,
+     0.326769953
+    ],
+    "vendorMedianMs": 0.052727,
+    "vendorSamplesMs": [
+     0.052724,
+     0.053485,
+     0.050227,
+     0.05273,
+     0.05079,
+     0.053551,
+     0.049957,
+     0.053129,
+     0.050428,
+     0.05333
+    ],
+    "candidateMedianMs": 0.1631115,
+    "aicoreUtilObserved": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "contendedRun": {
+    "verdict": "RETEST",
+    "why": "no quiet window was observed, so there is no reference showing that pairing cancels contention; contention was measured to shift the paired ratio by up to 2.05x on an unchanged candidate, so no performance verdict is made",
+    "quietWindows": 0,
+    "contendedWindows": 9,
+    "pointSpeedup_ifJudgedAnyway": 0.661478653,
+    "vendorMedianMs": 0.141232,
+    "vendorSamplesMs": [
+     0.140708,
+     0.14484,
+     0.149726,
+     0.128629,
+     0.143643,
+     0.150746,
+     0.141232,
+     0.111827,
+     0.124007
+    ],
+    "candidateMedianMs": 0.214198,
+    "aicoreUtilObserved": [
+     99,
+     99,
+     99,
+     99,
+     99,
+     99,
+     99,
+     99,
+     99
+    ]
+   },
+   "ratioShiftUnderContention": {
+    "quietPoint": 0.322401597,
+    "contendedPoint": 0.661478653,
+    "factor": 2.052,
+    "vendorTimeInflation": 2.679
+   },
+   "canaryAsDetector": {
+    "threshold": 1.15,
+    "inflations": [
+     1.086,
+     0.1386,
+     0.9841,
+     1.1578,
+     1.0,
+     1.1805,
+     0.5433,
+     1.1558,
+     0.2134
+    ],
+    "windowsAboveThreshold": 3,
+    "windowsTotal": 9,
+    "detectionRate": 0.333
+   }
+  },
+  "64x4096": {
+   "quietRun": {
+    "verdict": "RETEST",
+    "quietWindows": 10,
+    "contendedWindows": 0,
+    "pointSpeedup": 0.993860935,
+    "interval95": [
+     0.971079397,
+     1.025987048
+    ],
+    "vendorMedianMs": 0.003713,
+    "vendorSamplesMs": [
+     0.003771,
+     0.003691,
+     0.003693,
+     0.003736,
+     0.003766,
+     0.003683,
+     0.00357,
+     0.003675,
+     0.003749,
+     0.003733
+    ],
+    "candidateMedianMs": 0.0037395,
+    "aicoreUtilObserved": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "contendedRun": {
+    "verdict": "RETEST",
+    "why": "no quiet window was observed, so there is no reference showing that pairing cancels contention; contention was measured to shift the paired ratio by up to 2.05x on an unchanged candidate, so no performance verdict is made",
+    "quietWindows": 0,
+    "contendedWindows": 9,
+    "pointSpeedup_ifJudgedAnyway": 0.827323929,
+    "vendorMedianMs": 0.058345,
+    "vendorSamplesMs": [
+     0.044568,
+     0.071087,
+     0.058345,
+     0.054066,
+     0.072965,
+     0.058694,
+     0.072914,
+     0.033695,
+     0.039034
+    ],
+    "candidateMedianMs": 0.070233,
+    "aicoreUtilObserved": [
+     99,
+     99,
+     99,
+     99,
+     99,
+     99,
+     99,
+     99,
+     99
+    ]
+   },
+   "ratioShiftUnderContention": {
+    "quietPoint": 0.993860935,
+    "contendedPoint": 0.827323929,
+    "factor": 0.832,
+    "vendorTimeInflation": 15.714
+   },
+   "canaryAsDetector": {
+    "threshold": 1.15,
+    "inflations": [
+     1.1211,
+     0.9653,
+     1.0826,
+     0.8876,
+     0.5063,
+     1.1251,
+     1.0,
+     0.9833,
+     1.1863
+    ],
+    "windowsAboveThreshold": 1,
+    "windowsTotal": 9,
+    "detectionRate": 0.111
+   }
+  }
+ },
+ "findings": {
+  "finding1_pairingDoesNotAbsorbHeavyContention": {
+   "claim": "The paired protocol absorbs LIGHT contention (measured 3.3 percent earlier). It does NOT absorb sustained heavy contention: the paired ratio of an UNCHANGED candidate moved from 0.3224 to 0.6615, a factor of 2.05.",
+   "why": "The two arms suffer unequally: the candidate is a 64-core SimtVF kernel, the vendor is a small heavily optimised kernel, so saturation of the AICore penalises them differently and the ratio does not cancel.",
+   "consequence": "A run with no quiet window cannot decide performance. The protocol now returns RETEST in that case instead of attributing contention to the candidate.",
+   "correctedEarlierClaim": "\"paired ratio stable within +/-8 percent, neighbouring load shifts it 3.3 percent\" holds for light load only."
+  },
+  "finding2_canaryIsNotASensitiveDetector": {
+   "claim": "With AICore pinned at 99 percent for the whole run, the canary exceeded the 1.15 threshold in only 3 of 9 windows at 8192x4096 and 1 of 9 at 64x4096.",
+   "why": "The canary measures a 0.06 ms kernel, so its own noise is the same order as the signal.",
+   "consequence": "A canary INFLATION is strong positive evidence; a canary that does not inflate is WEAK evidence of quiet. The canary must never be used alone to justify a quiet label. Window-level contention is detected by the AICore trajectory (99 in all 9 windows here, correctly labelled).",
+   "costNote": "Measured by the Lead: one canary costs ~0.64 s wall clock to arbitrate 0.004 ms of device time (160,000x). Repeating it per window is not affordable, so the sensitivity limit is accepted and recorded rather than papered over."
+  },
+  "finding3_samplingRateIsSufficient": {
+   "claim": "samplingRateHz measured 1.16-3.88 with sparseWindows = 0, so the sparse guard did not misfire.",
+   "note": "The Lead asked whether MIN_WITNESS_SAMPLES_PER_SECOND = 0.5 would mark every window sparse and make \"quiet\" unusable. It does not: the sampler is a run-level background thread and windows last about 1 s, so 5-8 samples land inside each window."
+  }
+ },
+ "admissibility": {
+  "quietRun": "accept-genuine.json (12:53, no controlled load, all 10 windows quiet) is the performance evidence.",
+  "contendedRun": "contended-run.json is the witness validation experiment. It is NOT performance evidence and is judged RETEST by the current rule."
+ }
+}

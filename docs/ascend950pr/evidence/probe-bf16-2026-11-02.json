@@ -1,0 +1,754 @@
+{
+  "generated_at": "2026-11-02T10:21:49+08:00",
+  "purpose": "Decide open questions before Agent Team implementation. Fresh measurements only; no reuse of lost /tmp logs.",
+  "host": {
+    "npu_smi": "npu-smi 25.7.rc1",
+    "cards": [
+      {
+        "id": 0,
+        "health": "OK",
+        "hbm_used_mb": 7849,
+        "hbm_total_mb": 131072,
+        "processes": []
+      },
+      {
+        "id": 1,
+        "health": "OK",
+        "hbm_used_mb": 5977,
+        "hbm_total_mb": 131072,
+        "processes": [
+          {
+            "pid": 471734,
+            "user": "l00898962",
+            "cmd": "compare.py bench --policies ..."
+          }
+        ]
+      }
+    ],
+    "disk": {
+      "total": "28T",
+      "avail": "8.7T",
+      "used_pct": 68
+    },
+    "groups": [
+      "users",
+      "docker",
+      "HwHiAiUser"
+    ],
+    "sudo": "requires password"
+  },
+  "toolchain": {
+    "cann_9_2": "/data/pri/cann-9.2.0/cann/set_env.sh",
+    "bool_9_1_present": true,
+    "python": "/home/s00653124/.conda/envs/s00653124_tilelang/bin/python3 3.11.17",
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0.post7.dev20261011",
+    "tilelang": "0.1.15+cuda.git8e2d3c82 (editable, /home/s00653124/workspace/tilelang)",
+    "claude": "2.1.296 at /home/s00653124/.local/bin/claude"
+  },
+  "model_provider": {
+    "canary": "PASS",
+    "endpoint": "https://api.1031989.xyz",
+    "wire": "anthropic",
+    "model": "claude-opus-5-5",
+    "reply": "CANARY_OK",
+    "note": "bare base_url; key supplied via env var, not written to any repo file"
+  },
+  "fk_test_baseline": {
+    "command": "python3 -m pytest tests -q (CANN sourced, TORCH_DEVICE_BACKEND_AUTOLOAD=0)",
+    "result": "12 failed, 2041 passed, 1 skipped in 191.36s",
+    "collection_requires": [
+      "CANN sourced (else libhccl.so missing)",
+      "TORCH_DEVICE_BACKEND_AUTOLOAD=0 (else torch_npu autoload conflict)"
+    ],
+    "failure_groups": {
+      "missing_dependency": [
+        "tests/test_task_suite.py (safetensors not installed)"
+      ],
+      "fixture_or_state": [
+        "tests/test_loop_driver.py x10",
+        "tests/test_harness_guard.py x1"
+      ]
+    },
+    "note": "Pre-existing at HEAD 5030503; not caused by this plan. One driver test passes alone but fails in module run -> order/state dependent."
+  },
+  "bf16_rmsnorm_probe": {
+    "script": "scripts/probe_bf16_rmsnorm.py",
+    "card": 0,
+    "cache": "fresh per invocation",
+    "results": [
+      {
+        "shape": "8192x4096 bf16",
+        "compiled": true,
+        "max_rel_err": 0.0078125,
+        "max_abs_err": 0.03125,
+        "tilelang_ms": 0.1633842,
+        "vendor_ms": 0.05143163333333333,
+        "speedup_vs_vendor": 0.3148,
+        "vendor_max_rel_err": 0.007751937955617905
+      },
+      {
+        "shape": "64x4096 bf16",
+        "compiled": true,
+        "max_rel_err": 0.005434782709926367,
+        "max_abs_err": 0.00390625,
+        "tilelang_ms": 0.0046825,
+        "vendor_ms": 0.0040192,
+        "speedup_vs_vendor": 0.8583,
+        "vendor_max_rel_err": 0.005434782709926367
+      }
+    ],
+    "interpretation": [
+      "BF16 contract is buildable and numerically correct on this toolchain",
+      "both implementations sit at the bf16 rounding floor (~2^-7), so the 0.0078125 MATCH floor cannot distinguish precision",
+      "the repository example kernel is 3.18x SLOWER than vendor at prefill and 1.17x slower at decode: parity requires real kernel work, not plumbing",
+      "vendor latency here differs from earlier informal numbers; the frozen protocol must re-measure it"
+    ]
+  },
+  "paired_shared_card_validation": {
+    "date": "2026-11-02",
+    "script": "scripts/paired_bench.py",
+    "purpose": "Validate that paired A/B in one window survives a busy shared card, which is the premise of the acceptance protocol after the B1/B4 decisions.",
+    "conditions": {
+      "card": "0",
+      "npu_util_pct_during_run": 99,
+      "hbm_used_mb_during_run": 21309,
+      "other_tenant": "present"
+    },
+    "result": {
+      "shape": "8192x4096 bf16",
+      "pairs": 15,
+      "repeat_per_pair": 20,
+      "tiled_median_ms": 0.163049,
+      "vendor_median_ms": 0.05101,
+      "unpaired_ratio_of_medians": 0.3128,
+      "paired_median_ratio": 0.3124,
+      "paired_ratio_ci95": [
+        0.2852,
+        0.313
+      ],
+      "tiled_spread_pct": 37.1,
+      "vendor_spread_pct": 181.2,
+      "worst_paired_ratio": 0.878,
+      "clean_card_reference_ratio": 0.3148
+    },
+    "conclusions": [
+      "Paired median under a 99%-busy shared card agrees with the clean-card measurement to 0.8%: external load cancels.",
+      "Single-window spreads are large (vendor 181%, one pair at 0.878), so an unpaired two-median comparison would misread a co-tenant as a speed difference.",
+      "The acceptance protocol must interleave A/B and B/A in one window and judge on paired median plus bootstrap interval; a single bad pair is not a verdict.",
+      "Device locks must stay window-scoped: the card is legitimately usable while another tenant runs."
+    ],
+    "provenance_correction_2026_11_02": {
+      "defect": "conditions.npu_util_pct_during_run=99 and hbm_used_mb_during_run=21309 were typed into add_paired_evidence.py by hand. scripts/paired_bench.py makes zero npu-smi calls (grep -c npu-smi -> 0), so the run that produced the ratios never measured the conditions attributed to it.",
+      "consequence": "the sentence \"paired median under a 99%-busy shared card agrees with the clean-card measurement to 0.8%\" overstates what was shown. What the run did show is that the paired MEDIAN is robust to a bursty disturbance while a single pair is not: the worst pair read 0.878 against a median of 0.3124.",
+      "does_not_change": "the per-pair measurements, the spreads, the medians or the protocol conclusions about interleaving and window-scoped locks - all of those come from the script output.",
+      "superseded_by": "contention_bias_measured_2026-11-02, which measured BOTH conditions explicitly and found that sustained AICore-saturating load moves the paired median itself by 2.05x. The two are reconciled by intensity, not contradiction: a bursty neighbour is absorbed by the median, a sustained saturated one is not.",
+      "lesson": "a condition number must come from the same run as the result it labels, or it is decoration."
+    },
+    "reconciled_with_contention_bias": {
+      "question": "does the paired ratio survive a busy card?",
+      "answer": "it depends on intensity, and both halves were measured. Bursty neighbour: median moved 0.8% (this experiment). Sustained AICore 99%: median moved 105% at 8192x4096 and -17% at 64x4096 (contention_bias_measured_2026-11-02).",
+      "protocol_consequence": "so \"pairing cancels external load\" is only true for light/bursty load. The acceptance gate therefore excludes contended windows instead of trusting the ratio."
+    }
+  },
+  "msprof_attribution_check": {
+    "date": "2026-11-02",
+    "script": "scripts/inspect_msprof_attribution.py",
+    "shape": "4096x4096 bf16",
+    "result": {
+      "tiled_us": 82.63,
+      "vendor_us": 24.61,
+      "tiled_pipes": {
+        "aiv_vec": "84.9%",
+        "aiv_mte2": "32.0%",
+        "aiv_mte3": "12.6%"
+      },
+      "vendor_pipes": {
+        "aiv_vec": "80.7%",
+        "aiv_mte2": "64.2%",
+        "aiv_mte3": "44.9%"
+      }
+    },
+    "conclusions": [
+      "Each arm aggregates to exactly one KernelProfile, so neither side is silently summing a partial kernel set.",
+      "Both arms are AIV-vector-bound (vec 84.9% vs 80.7%); the gap is in data movement (mte2 32.0% vs 64.2%) and store (mte3 12.6% vs 44.9%), which suggests the example kernel is under-feeding the vector pipe rather than computing less.",
+      "Interface asymmetry: vendor also returns rstd (writes an extra tensor), the task returns y only. The vendor arm therefore does strictly more work, so a y-only comparison does not flatter the candidate.",
+      "Pipe counters give the optimization direction evidence, not just a ratio: raising mte2/net throughput is where the 3.2x lives."
+    ]
+  },
+  "row_tile_sweep": {
+    "date": "2026-11-02",
+    "script": "scripts/sweep_rows.py",
+    "shape": "8192x4096 bf16",
+    "note": "vendor_ms varies between runs (0.0514 clean, 0.0786 under a co-tenant) - another reason the protocol pairs measurements rather than comparing absolutes.",
+    "results": {
+      "rows=1": {
+        "ms": 0.289,
+        "mte2": "34.2%"
+      },
+      "rows=2": {
+        "ms": 0.1896,
+        "mte2": "58.9%"
+      },
+      "rows=4": {
+        "ms": 0.1642,
+        "mte2": "53.4%"
+      },
+      "rows=8": {
+        "error": "UB overflow: dyn_ubuf 271360 bytes > budget"
+      }
+    },
+    "conclusions": [
+      "Row tile is a real lever: 1->4 rows buys 1.76x (289us -> 164us), confirming the MTE2-starvation reading.",
+      "rows=8 does not fit UB (271360 B requested), so per-core row batching alone cannot close the gap; the example design is at a structural ceiling.",
+      "Bandwidth arithmetic: 8192x4096 bf16 = 128 MiB moved. Vendor 51us implies ~2.5 TB/s; our 164us implies ~0.8 TB/s. The gap is DMA/pipeline efficiency, not vector math (vec pipe already 85%).",
+      "Therefore the optimization target is UB budget and copy pipelining for the actual 216 KiB budget, not more arithmetic tuning. This is exactly the feedback the ForgeKernel loop is supposed to discover."
+    ]
+  },
+  "vendor_contract_check": {
+    "date": "2026-11-02",
+    "scripts": [
+      "scripts/check_vendor_api.py",
+      "scripts/check_vendor_eps.py"
+    ],
+    "api": "torch_npu.npu_rms_norm(x, w, eps) -> (y, rstd)",
+    "y": {
+      "shape": "[B, D]",
+      "dtype": "bfloat16"
+    },
+    "rstd": {
+      "shape": "[B, 1]",
+      "dtype": "float32"
+    },
+    "epsilon_semantics": {
+      "rstd_over_manual_median_ratio": 1.0,
+      "p1": 1.0,
+      "p99": 1.0,
+      "meaning": "vendor eps placement matches the task formula; no semantic mismatch to correct"
+    },
+    "y_vs_manual_max_abs": 0.03125,
+    "conclusions": [
+      "The vendor returns an extra rstd tensor the task does not require, so the vendor arm does strictly more work than the candidate must do; the comparison is not biased in the candidate favour.",
+      "A candidate that computes only y has a legitimate interface advantage and must be allowed to exploit it.",
+      "Epsilon semantics agree, so no tolerance correction is needed and the frozen tolerance can be applied to both arms equally."
+    ]
+  },
+  "anti_cheat_screening_limits": {
+    "date": "2026-11-02",
+    "script": "scripts/screen_cheat_vectors.py",
+    "finding": {
+      "genuine_tilelang": "no regex hit (correct)",
+      "direct_delegation": "regex hit (correct)",
+      "aliased_delegation": "NO regex hit (miss) but resolves to torch_npu.npu_rms_norm at runtime"
+    },
+    "conclusion": [
+      "A name-based deny list catches the naive case and misses the aliased one, so it cannot be the gate.",
+      "P9 must inspect reachable code (AST/dataflow across imports, getattr, importlib) and corroborate with runtime/artifact evidence that the candidate actually launched its own compiled kernel.",
+      "This is why the acceptance script needs both a static reachable-code check and a compiled-artifact check, and why a blanket torch_npu import ban is wrong (it would flag legitimate backend registration)."
+    ]
+  },
+  "shared_card_timing_protocol": {
+    "date": "2026-11-02",
+    "scripts": [
+      "scripts/paired_bench.py",
+      "scripts/xprocess_perturbation.py",
+      "scripts/contention_bias.py",
+      "scripts/contention_intensity.py",
+      "scripts/verified_contention.py"
+    ],
+    "repeated_quiet_measurements": {
+      "vendor_ms": [
+        0.020918,
+        0.024613,
+        0.029414,
+        0.051431
+      ],
+      "candidate_ms": [
+        0.082245,
+        0.082556,
+        0.163049
+      ],
+      "meaning": "absolute device time drifts run to run (vendor 0.0206-0.0514 ms, factor 2.5) because co-tenants come and go; a single absolute number is not evidence."
+    },
+    "within_window_paired_stability": {
+      "quiet_ratio": 0.3569,
+      "quiet_ratio_min": 0.3483,
+      "quiet_ratio_max": 0.4018,
+      "busy_ratio": 0.3687,
+      "busy_ratio_min": 0.3446,
+      "busy_ratio_max": 0.4282,
+      "meaning": "the paired ratio inside one window is stable to about +/-8%, which is what the verdict is computed from."
+    },
+    "audited_contention_run": {
+      "neighbour_alive": true,
+      "heartbeat_advanced": true,
+      "aicore_util_before_pct": 0,
+      "aicore_util_after_pct": 90,
+      "vendor_slowdown_pct": 3.8,
+      "candidate_slowdown_pct": 0.4,
+      "ratio_shift_pct": 3.3
+    },
+    "unexplained_outlier": {
+      "run": "xprocess_perturbation",
+      "quiet_ratio": 0.2512,
+      "busy_ratio": 0.4274,
+      "shift_pct": 70.1,
+      "note": "the neighbour ran with stderr discarded and no liveness check, so this window cannot be classified after the fact; it is not reproducible under an audited neighbour."
+    },
+    "protocol_consequences": [
+      "Never compare absolute device times across runs; only a ratio formed inside one window is meaningful.",
+      "A window must carry a witness: npu-smi AICore utilisation plus the neighbour heartbeat (if any), recorded in the receipt.",
+      "A window whose paired samples are unstable (spread beyond a pre-declared bound) is REPEATED, not converted into a FAIL and not averaged in.",
+      "One corrupted window (the +70% outlier) is the observed failure mode, so the verdict needs many pairs, a paired bootstrap lower bound, and a stability check - a single window must never decide.",
+      "Since a co-tenant makes the machine slower for both arms, a contended window is usable but must be labelled; the verdict is reported with the contention level it was obtained under."
+    ]
+  },
+  "precision_gate_discrimination": {
+    "date": "2026-11-02",
+    "script": "scripts/precision_discrimination.py",
+    "shape": "256x4096 bf16",
+    "tolerance_floor": 0.0078125,
+    "results": {
+      "normal": {
+        "fp32_max_rel": 0.0063694,
+        "bf16_max_rel": 0.034965,
+        "separation": "5.49x",
+        "fp32_mean_abs": 3.7e-08,
+        "bf16_mean_abs": 0.005617359
+      },
+      "near_zero_rows": {
+        "fp32_max_rel": 0.004065,
+        "bf16_max_rel": 0.0208333,
+        "separation": "5.13x",
+        "fp32_mean_abs": 4e-09,
+        "bf16_mean_abs": 0.00163673
+      },
+      "outlier_channels": {
+        "fp32_max_rel": 0.0068027,
+        "bf16_max_rel": 0.028777,
+        "separation": "4.23x",
+        "fp32_mean_abs": 7e-09,
+        "bf16_mean_abs": 0.003041767
+      }
+    },
+    "verdict": "The 2^-7 floor DOES discriminate: correct fp32-accumulating kernels land at 0.0041-0.0068 (pass) and a deliberately bf16-accumulating kernel lands at 0.021-0.035 (fail) on all three families, with 4.2-5.5x separation and ~1e5-1e6x separation on mean_abs.",
+    "correction": "An earlier note in this file claimed the tolerance floor had no discriminating power because both arms sit near bf16 rounding. That was wrong: it conflated absolute error (which does saturate) with relative error (which does not, because the mean+rsqrt stay in fp32 and the result is rounded once). The earlier claim is superseded by this measurement.",
+    "still_required": [
+      "Held-out families matter even though the floor discriminates: a candidate tuned only to the published inputs can still pass, so the negative controls and the held-out cases remain part of acceptance.",
+      "mean_abs is the sharpest signal and should be reported alongside max_rel.",
+      "A bf16-accumulating candidate is rejected by the existing floor, so no tolerance relaxation is needed for that failure mode."
+    ]
+  },
+  "lead_independent_registry_check": {
+    "date": "2026-11-02",
+    "script": "scripts/verify_registry.py",
+    "performed_by": "lead (not the implementer)",
+    "checks": {
+      "mode_of(cutedsl)": "cutedsl",
+      "mode_of(cuda-sol)": "cuda",
+      "mode_of(tilelang-ascend)": "tilelang",
+      "unknown_language": "raises UnknownLanguage with a message naming the file to register in",
+      "kb_dir(tilelang-ascend,ascend950pr)": "<repo>/hw_kb/tilelang-ascend/ascend950pr",
+      "LANGUAGES": [
+        "cuda",
+        "cutedsl",
+        "tilelang-ascend"
+      ],
+      "arch_regex": {
+        "tilelang-ascend": "^ascend\\d+[a-z]*$ (ascend950pr ok, sm100 rejected)",
+        "cutedsl/cuda": "^sm\\d+[a-z]?$ (sm100 ok, ascend950pr rejected)"
+      }
+    },
+    "conclusion": [
+      "The silent misroute (non-CUDA => cutedsl) is actually fixed: an unknown language now raises instead of reading the wrong knowledge base.",
+      "Arch validation is per-language, so an ascend arch cannot leak into a cuda task and vice versa.",
+      "Verified by the Lead against the live tree rather than accepted from the implementer report."
+    ]
+  },
+  "float64_on_ascend": {
+    "date": "2026-11-02",
+    "scripts": [
+      "scripts/check_fp64_device.py",
+      "scripts/check_fp64_downgrade.py"
+    ],
+    "facts": {
+      "torch.zeros(dtype=torch.float64, device=npu).dtype": "torch.float64 (allocation honours it)",
+      "x_float32_npu.double().dtype": "torch.float32  <-- SILENT downgrade, no error, no warning",
+      "float64_tensor_ops": "mean/item/vector_norm all succeed and return finite values"
+    },
+    "measured_impact": {
+      "vector_norm_256x256_rel_diff_vs_cpu_float64": 8e-10,
+      "cancellation_sum_1024": "exact (512.0 on both), because the test values are exactly representable in float32"
+    },
+    "honest_verdict": [
+      "There IS a real semantic defect: .double() on a float32 device tensor yields float32, so any eval code that casts then relies on extra precision is silently getting float32.",
+      "But the numerical impact on the metrics eval actually computes is ~1e-9 relative, which is 6 orders of magnitude below the 0.0078 match tolerance, so it does not flip a correctness verdict on these workloads.",
+      "The correct response is still to compute judge distances on CPU in true float64 (copy back first, exclude the copy from device timing): not because today numbers are wrong, but because a metric whose precision is silently unknown is not auditable.",
+      "This also means P5 device-isation is NOT blocked by float64: it can proceed, with float64 judge math relocated to CPU."
+    ]
+  },
+  "host_bound_aggregation_loss": {
+    "date": "2026-11-02",
+    "script": "scripts/hostbound_aggregation_loss.py",
+    "code_facts": {
+      "timing.py:737": "host_bound_ratio = round(max(hb), 3)  -- deliberately the worst workload",
+      "leaderboard.py:2426-2444 (_task_ref_alone)": "emits only median_ms / device_median_ms / host_enqueue_ms / device_window_basis; no host_bound_ratio max and no per-workload audit",
+      "timing_audit.HOST_BOUND_RATIO_WARN": 0.5
+    },
+    "identity": "geomean(a_i/b_i) == geomean(a_i)/geomean(b_i), so an archive that divides aggregated host enqueue by aggregated device time computes the GEOMEAN of the per-workload ratios, never the maximum.",
+    "measured": {
+      "example_per_workload_ratios": [
+        0.04,
+        0.88
+      ],
+      "max_per_workload_emitted_by_timing_py": 0.88,
+      "geomean_rederived_by_archive": 0.1876,
+      "audit_on_max": "BLOCKED (host-bound)",
+      "audit_on_rederived": "passes",
+      "verdict_differs": true
+    },
+    "conclusion": [
+      "The defect is real and it flips the verdict: a reference with one almost-entirely host-bound workload passes a device-timing audit after archival recomputation.",
+      "The fix must carry the per-workload max and the per-workload audit through emission, parsing and the archive - not just compute it in timing.py and drop it one layer up.",
+      "This is a prerequisite for a device-gated baseline on NPU: without it, the gate can be satisfied by a host-bound reference, and every speed-up measured against that reference is inflated.",
+      "It also means the earlier instinct to reject a reference whose workload ratios are [0.04, 0.88] must be enforced on the MAX, which is only possible if the max survives archival."
+    ]
+  },
+  "lead_independent_sandbox_check": {
+    "date": "2026-11-02",
+    "script": "scripts/verify_sandbox_modes.py",
+    "performed_by": "lead",
+    "method": "Render AgentPolicy.settings('student') under all three modes against the live tree and diff everything except the sandbox block.",
+    "sandbox_block": {
+      "strict": {
+        "enabled": true,
+        "failIfUnavailable": true,
+        "allowUnsandboxedCommands": false
+      },
+      "auto": {
+        "enabled": true,
+        "failIfUnavailable": false,
+        "allowUnsandboxedCommands": true
+      },
+      "off": {
+        "enabled": false,
+        "no_failIfUnavailable": true,
+        "no_allowUnsandboxedCommands": true
+      }
+    },
+    "invariance": {
+      "permissions_strict_equals_off": true,
+      "permissions_auto_equals_off": true,
+      "hooks_strict_equals_off": true,
+      "hooks_auto_equals_off": true,
+      "deny_rule_count": {
+        "strict": 7,
+        "off": 7
+      },
+      "hooks_present_off": true,
+      "only_sandbox_differs": true
+    },
+    "conclusion": [
+      "Turning the OS sandbox off does NOT remove the deny rules or the PreToolUse hooks: the two documents are identical apart from the sandbox block.",
+      "The three modes form a coherent progression: strict enforces a working sandbox; auto permits a documented fallback; off declares there is no OS sandbox and omits the two keys that would otherwise assert one is expected.",
+      "This matches what the host needs (bwrap cannot start here) without silently weakening the rest of the policy - the failure mode P1 was written to prevent.",
+      "Verified independently of the implementer, on the live tree."
+    ]
+  },
+  "lead_tool_access_check": {
+    "date": "2026-11-02",
+    "script": "scripts/verify_tool_access.py",
+    "performed_by": "lead",
+    "configuration": {
+      "sandbox": "off",
+      "network": "online",
+      "cluster": "deny"
+    },
+    "answers_the_question_from_turn_4": "whether Read / cat / ls / grep / curl / pip / ssh are usable",
+    "results": {
+      "Read|Write|cat|ls|grep|git|npu-smi": "ALLOWED - no deny rule names them and sandbox.enabled=false",
+      "curl|pip": "ALLOWED - network=online, so no network block is rendered",
+      "ssh|scp|rsync": "REFUSED - cluster=deny, independent of the network setting",
+      "Edit": "only .claude/** and scripts/agent_policy_hook.py are protected; other files writable"
+    },
+    "significance": [
+      "ssh refused while curl allowed is direct evidence the network and cluster policies are actually independent; before P1, student_online=True forced no_cluster=True so these could not differ.",
+      "Deny rules, hooks and the filesystem lists survive sandbox off (7 deny rules, hooks present), so turning the OS sandbox off did not silently remove the remaining checks.",
+      "The operator can rely on reading, grepping, git and npu-smi during optimisation iterations; only cluster access stays refused, which is the intended experimental-validity control."
+    ]
+  },
+  "paired_sample_size_study": {
+    "date": "2026-11-02",
+    "script": "scripts/sample_size_study.py",
+    "shape": "4096x4096 bf16",
+    "raw_pairs_25": [
+      0.269,
+      0.2687,
+      0.2631,
+      0.2658,
+      0.2652,
+      0.2675,
+      0.2638,
+      0.2697,
+      0.2653,
+      0.2683,
+      0.2629,
+      0.2665,
+      0.2662,
+      0.2667,
+      0.2656,
+      0.2658,
+      0.2667,
+      0.269,
+      0.2652,
+      0.2682,
+      0.2659,
+      0.2707,
+      0.2663,
+      0.2678,
+      0.2699
+    ],
+    "spread": {
+      "min": 0.2629,
+      "max": 0.2707,
+      "median": 0.2665,
+      "range_pct_of_median": 2.9
+    },
+    "bootstrap_ci_by_n": {
+      "5": "+-1.4%",
+      "7": "+-1.4%",
+      "9": "+-1.3%",
+      "11": "+-1.3%",
+      "15": "+-1.0%",
+      "21": "+-0.9%"
+    },
+    "conclusions": [
+      "Under a stable window, pairing is tight enough that 7-11 pairs already give a ~1.3% interval - far below the 2% equivalence margin the verdict uses, so the protocol is not sample-starved at its defaults.",
+      "The 25-pair range is only 2.9% of the median, which is why the paired design works: it removes the between-run drift that makes absolute times unusable.",
+      "Honest caveat: this particular window had no visible co-tenant activity. The earlier audited-contention run showed a 3.3% shift, and one unclassifiable window showed +70%. Sample count cannot repair a corrupted window, which is why the stability check and the per-window witness remain mandatory regardless of n.",
+      "Defaults chosen: >=15 pairs per window, >=3 independent processes, and a repeat-on-instability rule rather than a fixed n alone."
+    ]
+  },
+  "ulp_bound_analysis": {
+    "date": "2026-11-02",
+    "script": "scripts/ulp_bound_analysis.py",
+    "question": "Is 2^-7 a hole in the precision gate, or exactly the bf16 one-ulp bound?",
+    "measurements": {
+      "theoretical_one_ulp_bound": 0.0078125,
+      "measured_neighbour_gap_max_rel": 0.0078125,
+      "measured_rounding_shift_max_rel": 0.0038908682985058373,
+      "gate_threshold": 0.0078125
+    },
+    "answer": {
+      "is_threshold_one_ulp": true,
+      "vendor_error_in_ulps": 1.0,
+      "correct_fp32_error_in_ulps": 1.0,
+      "bf16_accumulation_error_in_ulps": [
+        3.39,
+        3.74,
+        5.53
+      ]
+    },
+    "corrections_to_earlier_claims": [
+      "An earlier note in PLAN.md said the 2^-7 MATCH floor had no discriminating power. That was wrong: it mistook zero margin for zero power. The vendor and a correct fp32 implementation both land at exactly 1.0 ulp, which is what a correctly rounded bf16 result does, while a bf16 accumulator lands at 3.4-5.5 ulp and is still rejected.",
+      "An earlier summary reported correct-implementation max_rel as 0.0041-0.0068 with 4.2-5.5x separation. Those samples did not reach the ulp boundary; the 8192x4096 measurement does. The separation factor is real but the margin argument was not.",
+      "The bf16-accumulation separation was first reported as 3.4-5.5 ulp over six combinations. That was wrong: 3.39/3.74/5.53 are the three 8192x4096 numbers and the 64x4096 shape was never included. Recomputing all six gives 2.053-5.525 ulp, so the narrowest rejection margin is 2.05x (64x4096/near_zero_rows, 2.053 ulp against a 1.000 ulp limit), not 3.4x. Every combination is still rejected, so the conclusion held, but the number supporting it was overstated.",
+      "The vendor ulp range on the 64x4096 shape was reported as 0.0-0.6 ulp. Measured values are 0.000 / 0.529 / 0.601. The upper bound matters because P2 starts widening once the vendor exceeds 0.667 ulp, the point at which 1.5x crosses the one-ulp floor; the margin is only 0.066 ulp, so this must be reviewed per shape rather than assumed."
+    ],
+    "hard_constraints": [
+      "The comparison must be inclusive (<=). Written as <, it would fail the vendor and a correct implementation, i.e. reject the very target it is meant to accept.",
+      "Discriminating power must be argued in ulp multiples, never in margin percentages.",
+      "A regression test must lock that equality passes."
+    ],
+    "ulp_table_all_six_combinations": {
+      "note": "computed by the Lead from artifacts/precision-matrix.json; units are multiples of 2**-7",
+      "rows": {
+        "64x4096/normal": {
+          "vendor": 0.0,
+          "fp32": 0.0,
+          "bf16": 4.129,
+          "limit": 1.0,
+          "bf16_over_limit": 4.13
+        },
+        "64x4096/near_zero_rows": {
+          "vendor": 0.529,
+          "fp32": 0.703,
+          "bf16": 2.053,
+          "limit": 1.0,
+          "bf16_over_limit": 2.05
+        },
+        "64x4096/outlier_channels": {
+          "vendor": 0.601,
+          "fp32": 0.525,
+          "bf16": 3.657,
+          "limit": 1.0,
+          "bf16_over_limit": 3.66
+        },
+        "8192x4096/normal": {
+          "vendor": 1.0,
+          "fp32": 1.0,
+          "bf16": 5.525,
+          "limit": 1.5,
+          "bf16_over_limit": 3.68
+        },
+        "8192x4096/near_zero_rows": {
+          "vendor": 0.992,
+          "fp32": 0.992,
+          "bf16": 3.391,
+          "limit": 1.488,
+          "bf16_over_limit": 2.28
+        },
+        "8192x4096/outlier_channels": {
+          "vendor": 0.992,
+          "fp32": 0.992,
+          "bf16": 3.737,
+          "limit": 1.488,
+          "bf16_over_limit": 2.51
+        }
+      }
+    },
+    "narrowest_rejection": {
+      "combination": "64x4096/near_zero_rows",
+      "bf16_ulp": 2.053,
+      "limit_ulp": 1.0,
+      "margin": 2.05,
+      "why_it_matters": "this, not 3.4x, is the figure that supports the gate having discriminating power; a test now locks it specifically"
+    },
+    "p2_widening_boundary": {
+      "vendor_ulp_at_which_widening_starts": 0.667,
+      "measured_64x4096_outlier_channels_vendor_ulp": 0.601,
+      "distance": 0.066,
+      "meaning": "P2 keeps the one-ulp floor for every measured row, but the closest row sits only 0.066 ulp from where the 1.5x factor would begin to loosen the bar"
+    }
+  },
+  "precision_rule_power_check": {
+    "date": "2026-11-02",
+    "performed_by": "lead",
+    "subject": "the accept script's P2 rule",
+    "rule": "max_rel_cand <= max(2**-7, 1.5 * max_rel_vendor)",
+    "concern": "a 1.5x factor on the vendor error could systematically loosen the bar for a candidate",
+    "measured_ceiling": {
+      "max_limit_in_ulps": 1.5,
+      "where": "8192x4096/normal, where the vendor sits at exactly 1.0 ulp",
+      "does_it_widen_when_vendor_is_low": "no - for the 64x4096 families the vendor is at 0.0-0.6 ulp, the 2**-7 floor binds, and the limit stays at 1.00 ulp"
+    },
+    "discrimination_preserved": "every bf16-accumulating implementation measured (3.39-5.53 ulp) still exceeds the limit in all six shape/family rows",
+    "verdict": "The 1.5x factor absorbs the boundary case where the vendor itself sits on the one-ulp floor; it never turns into a blanket relaxation, and the gate still rejects every deliberate low-precision implementation on the measured data.",
+    "residual_risk": "The factor is only exercised when the vendor error is near the floor. If a future shape puts the vendor at 3 ulp, the candidate limit becomes 4.5 ulp, which would admit a somewhat sloppy kernel - so the reported ulp columns must be reviewed per shape rather than only the pass/fail verdict."
+  },
+  "shared_machine_tenants_2026-11-02": {
+    "date": "2026-11-02",
+    "purpose": "concrete evidence that this is a shared machine, gathered while the acceptance work ran",
+    "observed_tenants": [
+      {
+        "user": "mwx1513432",
+        "work": "python -P -m ascend_eval evaluate-hardware --device npu, nonce run-5-attempt-25",
+        "card": "npu0 (flock /tmp/ascend_eval_npu_0.lock)",
+        "significance": "an independent team running NPU kernel evaluation on the same host, also perf-oriented"
+      },
+      {
+        "user": "various",
+        "work": "tbe-auth-guard, docker --device=/dev/davinci0,1, cursor/vscode servers",
+        "card": "mixed",
+        "significance": "a busy multi-tenant host, not a quiet lab card"
+      },
+      {
+        "user": "unknown",
+        "work": "as2_llm 1641 MB, AICore 92%, HBM 8207 MB",
+        "card": "npu1",
+        "significance": "peak contention observed on the card under test; it appeared and vanished within minutes"
+      }
+    ],
+    "witness_implications": {
+      "npu_smi_cost_measured": {
+        "npu-smi info -t usages": "0.79-1.04 s per call",
+        "npu-smi info (full table)": "0.80-2.39 s per call"
+      },
+      "consequence": "a 100-200 ms AICore trajectory is physically unavailable on this host. Requiring one would have forced the implementation to fabricate a witness.",
+      "adopted_design": "a canary kernel measured inside every window, compared against the run own median (CANARY_INFLATION 1.15); it has no sampling-rate problem because it observes at the resolution the measurement already runs at",
+      "retained_independent_evidence": "slow npu-smi polling is kept alongside the canary because its failure mode differs: the canary is in-process, npu-smi is outside it"
+    },
+    "false_positive_warnings": [
+      "An NPU-shaped command from another user does not prove THIS card is contended: mwx1513432 pins to npu0, so its processes are machine-load evidence, not card-contention evidence.",
+      "Process names do not identify owners. npu-smi reports pid/name/memory only; ownership needs ps with the user column.",
+      "A card can show no processes while still holding 5.4 GB of HBM: unreleased allocation is normal here and is not a running tenant."
+    ]
+  },
+  "contention_bias_measured_2026-11-02": {
+    "date": "2026-11-02",
+    "experiment": "the same candidate artifact was measured twice: once on an idle card, once while a controlled background load held npu:1 at AICore 99%. The load was started by the implementer, not a third party - recorded here because the first reading mistook it for a stranger.",
+    "measurements": {
+      "8192x4096": {
+        "idle": {
+          "vendorMs": 0.052727,
+          "candidateMs": 0.1631115,
+          "ratio": 0.322401597
+        },
+        "contended": {
+          "vendorMs": 0.141232,
+          "candidateMs": 0.214198,
+          "ratio": 0.661478653
+        },
+        "victimFactor": {
+          "vendor": 2.68,
+          "candidate": 1.31
+        },
+        "ratioShift": "+105%",
+        "bias": "favours the candidate"
+      },
+      "64x4096": {
+        "idle": {
+          "vendorMs": 0.003713,
+          "candidateMs": 0.0037395,
+          "ratio": 0.993860935
+        },
+        "contended": {
+          "vendorMs": 0.058345,
+          "candidateMs": 0.070233,
+          "ratio": 0.827323929
+        },
+        "victimFactor": {
+          "vendor": 15.71,
+          "candidate": 18.78
+        },
+        "ratioShift": "-17%",
+        "bias": "penalises the candidate"
+      }
+    },
+    "headline_finding": "The bias DIRECTION reverses between shapes, so contention is not a conservative error. Pairing does not cancel it because the two arms are not equally sensitive.",
+    "why_pairing_fails_here": "The candidate is a 64-core SimtVF kernel and the vendor op is a small highly optimised kernel; under a saturated AICore they are harmed by different factors (1.31x vs 2.68x at 8192x4096), so their ratio does not cancel the disturbance.",
+    "false_pass_risk": {
+      "ratio_inflation": 2.052,
+      "consequence": "a candidate whose true ratio is 0.478 would be reported at 0.98 and pass the MATCH gate; one at 0.487 would be reported at 1.00. A 2.05x contention level is therefore enough to certify an implementation that is twice as slow."
+    },
+    "canary_detector_quality": {
+      "inflationReadings": [
+        1.086,
+        0.139,
+        0.984,
+        1.158,
+        1.0,
+        1.181,
+        0.543,
+        1.156,
+        0.213
+      ],
+      "detectionsAbove1_15": 3,
+      "windows": 9,
+      "detectionRate": "33%",
+      "why": "the canary runs for ~0.06 ms, so its noise is the same order as the signal it is meant to reveal"
+    },
+    "a_detector_that_did_work": {
+      "aicoreTrajectory": "99% on 9 of 9 windows, correctly flagging every one",
+      "conclusion": "the reliable primary criterion is the out-of-process AICore trajectory plus the device process table; the canary is demoted to a supporting positive signal and must never be used as a negative one"
+    },
+    "protocol_change_required": [
+      "contended windows are excluded from the judged sample entirely; they are recorded and shown but never enter the point estimate or the bootstrap",
+      "if quiet (non-sparse) windows number fewer than the minimum sample size, the shape is RETEST, not judged",
+      "if quiet windows are under 70% of all windows, the shape is RETEST: the remaining sample would be selectively biased",
+      "the report must display contended/quiet counts and, where both a contended and an idle run exist for one artifact, the ratio difference between them",
+      "why: a median resists noise but not systematic shift, and this shift is systematic (2.05x), not random"
+    ],
+    "supersedes": "An earlier note said an audited neighbour caused only a 3.3% shift and that pairing was essentially immune. That was a LIGHT load. At AICore 99% the shift is 105%, i.e. a different regime, and the earlier statement must not be used to justify judging in a contended window."
+  }
+}

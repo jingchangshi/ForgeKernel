@@ -1,0 +1,213 @@
+{
+  "date": "2026-11-02T12:45:31+0800",
+  "script": "scripts/negative_controls.py",
+  "acceptScript": "/home/s00653124/workspace/forgekernel-ascend950pr-work/sources/AgentGates/agent_gates/adapters/forgekernel-ascend-npu/scripts/accept_rmsnorm.py",
+  "acceptDigest": "9d4488b2966e122f9f2327b95a1d0785cbb344b0bfad1bc2a99cd225cda14b32",
+  "controls": [
+    {
+      "control": 1,
+      "name": "delegating candidate (importlib + getattr + string concatenation)",
+      "expected": "refused as inauthentic",
+      "observed": {
+        "exitCode": 1,
+        "verdict": "FAIL",
+        "stage": "authenticity",
+        "authenticity": "fail",
+        "delegations": [
+          {
+            "detail": "resolves torch_npu.npu_rms_norm through getattr (alias of a vendor fusion operator)",
+            "file": "kernel.py",
+            "line": 16
+          },
+          {
+            "detail": "calls the vendor fusion operator torch_npu.npu_rms_norm",
+            "file": "kernel.py",
+            "line": 20
+          }
+        ],
+        "reasons": [
+          "the candidate delegates its computation to a vendor fusion operator: kernel.py:16 resolves torch_npu.npu_rms_norm through getattr (alias of a vendor fusion operator); kernel.py:20 calls the vendor fusion operator torch_npu.npu_rms_norm",
+          "no new device binary (.aibin) appeared in the empty kernel cache while the archived source was compiled, so no kernel of the candidate own was produced during acceptance"
+        ]
+      },
+      "passed": true
+    },
+    {
+      "control": 2,
+      "name": "deliberate bf16 accumulation, measured on this machine",
+      "expected": "refused by the precision gate; the honest fp32 arm passes",
+      "observed": {
+        "bf16Arm": {
+          "verdict": "fail",
+          "failedFamilies": [
+            "8192x4096/normal",
+            "8192x4096/near_zero_rows",
+            "8192x4096/outlier_channels",
+            "64x4096/normal",
+            "64x4096/near_zero_rows",
+            "64x4096/outlier_channels"
+          ],
+          "ulp": [
+            {
+              "family": "8192x4096/normal",
+              "candidate": 5.5252,
+              "vendor": 1.0,
+              "limit": 1.5,
+              "candidateOverLimit": 3.683
+            },
+            {
+              "family": "8192x4096/near_zero_rows",
+              "candidate": 3.3907,
+              "vendor": 0.9922,
+              "limit": 1.4884,
+              "candidateOverLimit": 2.278
+            },
+            {
+              "family": "8192x4096/outlier_channels",
+              "candidate": 3.7372,
+              "vendor": 0.9922,
+              "limit": 1.4884,
+              "candidateOverLimit": 2.511
+            },
+            {
+              "family": "64x4096/normal",
+              "candidate": 4.129,
+              "vendor": 0.0,
+              "limit": 1.0,
+              "candidateOverLimit": 4.129
+            },
+            {
+              "family": "64x4096/near_zero_rows",
+              "candidate": 2.0535,
+              "vendor": 0.5289,
+              "limit": 1.0,
+              "candidateOverLimit": 2.054
+            },
+            {
+              "family": "64x4096/outlier_channels",
+              "candidate": 3.6571,
+              "vendor": 0.6009,
+              "limit": 1.0,
+              "candidateOverLimit": 3.657
+            }
+          ]
+        },
+        "honestArm": {
+          "verdict": "pass",
+          "worstFractionOfLimit": 0.004532142
+        }
+      },
+      "passed": true
+    },
+    {
+      "control": 3,
+      "name": "job evidence: missing marker / non-zero exit / timeout / all skipped",
+      "expected": "every one is FAIL; missing evidence is a usage error, not a pass",
+      "observed": {
+        "missing marker": {
+          "verdict": "fail",
+          "reasons": [
+            "the completion marker is absent from the job log, so the run never reached the end of its task"
+          ]
+        },
+        "non-zero exit": {
+          "verdict": "fail",
+          "reasons": [
+            "the job exited 1, not 0"
+          ]
+        },
+        "timeout": {
+          "verdict": "fail",
+          "reasons": [
+            "the job exceeded its deadline and was killed: a partial run cannot report a measurement"
+          ]
+        },
+        "everything skipped": {
+          "verdict": "fail",
+          "reasons": [
+            "every collected item was skipped, which is not a result"
+          ]
+        },
+        "nonexistent evidence directory": {
+          "exitCode": 2,
+          "stderr": "accept-rmsnorm: no process-result.json under /tmp/negative-controls-mjd9g6gy/no-such-run"
+        }
+      },
+      "passed": true
+    },
+    {
+      "control": 4,
+      "name": "device baseline host_bound_ratio [0.04, 0.88]",
+      "expected": "the maximum 0.88 blocks the baseline; the ratio of geometric means 0.1876 would have passed it",
+      "observed": {
+        "maxRatio": 0.88,
+        "verdictOnMax": "invalid",
+        "rederived": 0.187617,
+        "geometricMeanOfRatios": 0.187617,
+        "verdictOnRederived": "valid",
+        "verdictFlips": true,
+        "baselineValid": false,
+        "gateVerdict": "INVALID_EVIDENCE",
+        "gateStage": "deviceBaseline",
+        "reason": "workload decode is host-bound (host_bound_ratio 0.88 at threshold 0.5): its device time is host dispatch cost, so a device baseline taken from it is invalid"
+      },
+      "passed": true
+    },
+    {
+      "control": 5,
+      "name": "correct but 3.18x slower candidate (example kernel vs vendor)",
+      "expected": "FAIL, and the best correct artifact is preserved",
+      "observed": {
+        "pointSpeedup": 0.314565483,
+        "interval95": [
+          0.300585043,
+          0.324072192
+        ],
+        "status": "FAIL",
+        "gateVerdict": "FAIL",
+        "gateStage": "performance",
+        "bestCorrectArtifact": "/home/s00653124/workspace/forgekernel-ascend950pr-plan/artifacts/candidates/genuine"
+      },
+      "passed": "/home/s00653124/workspace/forgekernel-ascend950pr-plan/artifacts/candidates/genuine",
+      "evidenceBasis": "measurements from artifacts/probe/ (0.1634 ms example kernel vs 0.0514 ms vendor, 8192x4096), reused offline"
+    }
+  ],
+  "allPassed": true,
+  "deviceUsed": false,
+  "exclusion_rule_closure_2026_11_02": {
+    "closed_by": "Lead, after accept-verify stopped mid-edit",
+    "defect": "the two RETEST exit paths in judge_timing lacked quietFractionOfWindows, so the new exclusion rule was only half-wired",
+    "also_fixed": "an unreachable guard: the usable<MIN_WINDOWS check sat AFTER the quiet rules, and since the quiet sample is a subset of usable it could never be reached",
+    "suite_state": {
+      "count": 74,
+      "result": "74 passed",
+      "deviceHidden": true,
+      "torchLoaded": false,
+      "torchNpuLoaded": false
+    },
+    "replay_under_new_rules": {
+      "cleanRunChanged": false,
+      "contendedRun8192": "FAIL -> RETEST",
+      "why_clean_unchanged": "10/10 windows quiet, so nothing is excluded"
+    },
+    "regression_probe": {
+      "reverted_to": "sample = list(usable)",
+      "testsFailed": 5,
+      "restored": true
+    },
+    "identity": {
+      "agentGates": "a36486e",
+      "forgeKernel": "c4cac38",
+      "fkDirty": 0,
+      "fkTrackedFiles": 463,
+      "pinnedScriptsIntact": [
+        "scripts/fk_gate.py",
+        "scripts/fk_device_probe.py"
+      ],
+      "newWorkUntracked": [
+        "scripts/accept_rmsnorm.py",
+        "tests/"
+      ]
+    }
+  }
+}

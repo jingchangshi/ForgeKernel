@@ -1,0 +1,85 @@
+{
+  "replay": "recorded windows re-judged under the exclusion rule (contended/sparse never enter the decision sample)",
+  "why": "the clean run predates the rule, so its published verdict had to be re-derived from its own recorded windows rather than assumed still valid",
+  "clean_run_12_53": {
+    "source": "artifacts/accept-genuine.json",
+    "64x4096": {
+      "before": "RETEST",
+      "after": "RETEST",
+      "decided": 10,
+      "quiet": 10,
+      "contended": 0,
+      "point": 0.993860935,
+      "interval95": [
+        0.971079397,
+        1.025987048
+      ]
+    },
+    "8192x4096": {
+      "before": "FAIL",
+      "after": "FAIL",
+      "decided": 10,
+      "quiet": 10,
+      "contended": 0,
+      "point": 0.322401597,
+      "interval95": [
+        0.311470516,
+        0.326769953
+      ]
+    },
+    "verdictChanged": false,
+    "interpretation": "every window was quiet, so the exclusion rule removes nothing and the published verdict stands. This is the formal performance evidence."
+  },
+  "contended_run_13_03": {
+    "source": "artifacts/contended-run.json",
+    "64x4096": {
+      "before": "RETEST",
+      "after": "RETEST",
+      "decided": 0,
+      "quiet": 0,
+      "contended": 9
+    },
+    "8192x4096": {
+      "before": "FAIL",
+      "after": "RETEST",
+      "decided": 0,
+      "quiet": 0,
+      "contended": 9,
+      "note": "the old rules judged it FAIL on a sample with no quiet reference at all"
+    },
+    "verdictChanged": true,
+    "interpretation": "9 of 9 windows were contended, so nothing is left to decide on. The old code still returned FAIL; that was the defect this rule repairs. The run is kept as the witness validation experiment only, never as a performance conclusion."
+  },
+  "control_probes": {
+    "exclusion_reverted_on_purpose": {
+      "replaced_line": "sample = list(usable)",
+      "tests_failed": 5,
+      "which": [
+        "test_a_run_with_no_quiet_window_decides_nothing",
+        "test_contended_windows_are_labelled_and_excluded_from_the_sample",
+        "test_contended_windows_never_reach_the_verdict",
+        "test_a_sparse_window_is_counted_but_not_decided_on",
+        "one more in WindowClassificationCase"
+      ],
+      "conclusion": "the guard is load-bearing, not decorative: reverting the implementation breaks the tests that claim to protect it"
+    },
+    "contamination_probe": {
+      "setup": "15 quiet windows at 1.02x plus 5 contended at 0.20x (75% quiet, so the gate passes)",
+      "decisionSampleWindows": 15,
+      "pointSpeedup": 1.02,
+      "leaked": false,
+      "conclusion": "with the gate satisfied the verdict is still computed from quiet windows only, so a contended arm cannot drag the median"
+    },
+    "branch_reachability": {
+      "fixed": "the unusable-shortfall check now runs BEFORE the quiet rules; sample is a subset of usable, so in the old order that branch could never be reached",
+      "covered_by": "test_an_unlabelled_shortfall_is_not_reported_as_a_contention_shortfall"
+    }
+  },
+  "wash_to_pass_arithmetic": {
+    "trueRatio": 0.478,
+    "inflation": 2.052,
+    "reportedAs": 0.981,
+    "matcLowerBound": 0.98,
+    "conclusion": "a candidate twice as slow would clear the MATCH lower bound if contended windows were allowed into the sample"
+  }
+}

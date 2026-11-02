@@ -1,0 +1,169 @@
+{
+  "date": "2026-11-02T11:59:54+08:00",
+  "script": "scripts/lead_e2e_fk_job.py",
+  "performed_by": "lead (independent of implementers)",
+  "what_it_proves": "The patched ForgeKernel drives a real Ascend job end to end: device resolution -> job env -> per-device lock -> gpu_entry.sh -> TileLang compile+run on NPU -> completion marker.",
+  "steps": [
+    {
+      "step": "device_resolution",
+      "arch": "ascend950pr",
+      "kind": "npu",
+      "visible_env": "ASCEND_RT_VISIBLE_DEVICES",
+      "lock_name": "npu0"
+    },
+    {
+      "step": "job_env",
+      "visible_var": "ASCEND_RT_VISIBLE_DEVICES",
+      "value": "0",
+      "timeout": "300"
+    },
+    {
+      "step": "job_run",
+      "status": "Succeeded"
+    },
+    {
+      "step": "kernel_result",
+      "max_abs_err": 0.015625,
+      "device_ms": 0.022166,
+      "device_visible": "0",
+      "npu_count": 1
+    }
+  ],
+  "job_log_markers": {
+    "compile": "TileLang begins/completes to compile kernel `main`",
+    "completion": "[gpu_entry.sh] task=all finished"
+  },
+  "notes": [
+    "The physical device id is passed through ASCEND_RT_VISIBLE_DEVICES and the process sees exactly one device (npu_count=1), which is the correct isolation contract.",
+    "The lock name is npu0, not gpu0: the P2 device abstraction is what the runner actually used.",
+    "max_abs_err 0.015625 is consistent with bf16 rounding for this workload and matches the vendor probe error scale.",
+    "device_ms 0.022166 was measured by msprof inside the job, so the timing basis reaches through the job boundary.",
+    "This runs without the tilelang-ascend KB tree (P7), which the device path does not depend on."
+  ],
+  "limitations": [
+    "This is one bounded smoke job, not a ForgeKernel optimisation loop: no judge, no calibrate, no student iterations.",
+    "The job imports tilelang directly rather than through a card eval harness, because eval device-isation (P5) is not implemented yet.",
+    "The operator tree is synthetic; a real card tree with eval/ and problem.json is still to be produced."
+  ],
+  "provenance_caveat": {
+    "raised_by": "ag-adapter (observed SOURCE_IDENTITY_CHANGED while running the smoke gate)",
+    "issue": "This run happened while fk-patch was still editing ForgeKernel (launch.py, localenv.py, loop/* and others were modified). A receipt binds to the source identity, so a PASS recorded mid-edit is STALE the moment the tree changes again.",
+    "what_this_evidence_validly_claims": "That the device plumbing worked at that moment: arch->npu mapping, ASCEND_RT_VISIBLE_DEVICES delivery, the npu0 lock, a real TileLang compile+run in the job, and msprof timing through the job boundary.",
+    "what_it_does_NOT_claim": "That it is the final acceptance artifact. It must be re-recorded against the frozen commit.",
+    "action": "After fk-patch commits, re-run scripts/lead_e2e_fk_job.py against the committed tree and record the commit sha alongside it."
+  },
+  "final_recording": {
+    "recorded_at": "2026-11-02T12:22:45+08:00",
+    "frozen_commits": {
+      "ForgeKernel": "c4cac38d334474988c36d547561b1625b8778cf6",
+      "ForgeKernel_tree_clean": true,
+      "AgentGates": "7811eb665fa86cfa9648777a154c4e69c01ee50e"
+    },
+    "device_conditions": {
+      "card": "npu:0",
+      "health": "Alarm",
+      "hbm_used_mb": 5438,
+      "note": "a co-tenant had the card; the job ran anyway, as intended on a shared machine"
+    },
+    "steps": [
+      {
+        "step": "device_resolution",
+        "arch": "ascend950pr",
+        "kind": "npu",
+        "visible_env": "ASCEND_RT_VISIBLE_DEVICES",
+        "lock_name": "npu0"
+      },
+      {
+        "step": "job_env",
+        "visible_var": "ASCEND_RT_VISIBLE_DEVICES",
+        "value": "0"
+      },
+      {
+        "step": "job_run",
+        "status": "Succeeded"
+      },
+      {
+        "step": "kernel_result",
+        "max_abs_err": 0.015625,
+        "device_ms": 0.022092,
+        "device_visible": "0",
+        "npu_count": 1
+      }
+    ],
+    "reproducibility": "This is a second, independent recording of the same script on the frozen commit; the kernel error is identical and the device time differs by 0.3%, which is measurement noise rather than a behavioural change.",
+    "supersedes": "the earlier mid-edit recording, which this file keeps under provenance_caveat for honesty"
+  },
+  "adapter_sourcewrite_defect_and_fix": {
+    "found_by": "ag-adapter",
+    "found_at": "2026-11-02T12:22:55+08:00",
+    "defect": "The build Gate installed with `pip install <checkout>`. setuptools writes `build/` into that checkout; ForgeKernel does not gitignore `build/`, so `source_identity.snapshot()` saw 63 new files, the post-gate identity differed from the pre-gate one, and the Gate marked its own receipt STALE / SOURCE_IDENTITY_CHANGED -- contradicting the manifest's sourceWrite: false.",
+    "why_it_matters": "sourceWrite: false was a promise the implementation did not keep. A gate that writes the tree it audits makes every receipt it produces unverifiable.",
+    "fix": "Copy exactly the file set the receipt hashes into build-src/<commit>/ and install from the copy; re-hash the copy and refuse to install unless it equals the original.",
+    "lead_independent_verification": {
+      "build_gate_status": "PASS",
+      "all_eight_checks_true": true,
+      "source_copy": {
+        "fileCount": 463,
+        "hashMatches": true,
+        "sourceHash_equals_copyHash": "5f21382b7a50176d5662dc0563a5d155396d8448f94d7203c07d3a98c1c3f98a"
+      },
+      "source_tree_before": {
+        "hash": "dbfe9b35f5e76c5fbdbd91bac99de560228b975a5c3028902508dfffe3bac577",
+        "fileCount": 463,
+        "dirty": 0
+      },
+      "source_tree_after": {
+        "hash": "dbfe9b35f5e76c5fbdbd91bac99de560228b975a5c3028902508dfffe3bac577",
+        "fileCount": 463,
+        "dirty": 0
+      },
+      "identity_unchanged_across_build": true
+    },
+    "note_on_hash_domains": "The copy hash (5f21382b...) and the source identity hash (dbfe9b35...) differ because they are different digests over the same file set: the copy check compares the copy against itself, while the receipt identity is the engine's own snapshot digest. The comparison that matters - copy against original - matched.",
+    "failed_receipt_kept": "artifacts/final/build-FAILED-sourcewrite/ preserves the original failure as evidence that the defect was real and was found by running the gate, not by reading it.",
+    "regression": "A test now asserts the build leaves the source identity unchanged; reverting to installing from the checkout would fail it."
+  },
+  "final_adapter_acceptance": {
+    "date": "2026-11-02T04:37:00+00:00",
+    "window_identity": {
+      "ForgeKernel": "c4cac38d334474988c36d547561b1625b8778cf6",
+      "AgentGates": "a36486e  (install from a verified copy; window identity for this run)"
+    },
+    "results": [
+      {
+        "gate": "forgekernel-ascend-npu-build",
+        "status": "PASS",
+        "checks_true": "8/8"
+      },
+      {
+        "gate": "forgekernel-ascend-npu-smoke",
+        "status": "PASS",
+        "checks_true": "9/9"
+      }
+    ],
+    "sourcewrite_fulfilled": {
+      "evidence": "both receipts report source.head c4cac38d3344 and source.hash dbfe9b35f5e76c5f... over 463 files, and adapter sha 26cfbd452b4fc215 - identical before and after, so the Gate did not move the identity it audits",
+      "copy_check": "sourceHash == copyHash (5f21382b...) with hashMatches true",
+      "closed_loop": "sourceUnchangedAfterBuild true"
+    },
+    "device_window": {
+      "resource": "npu:1",
+      "started": "04:37:54.454887Z",
+      "released": "04:37:54.607214Z",
+      "heldSeconds": 0.03,
+      "waited": 0.0,
+      "occupancy": "shared(3)"
+    },
+    "occupancy_semantics": {
+      "before_snapshot": "04:36:56Z - npu0 had 2 tenant processes, npu1 had 3",
+      "after_snapshot": "04:38:36Z - npu0 had 0 tenant processes, npu1 still had 3 but with completely different PIDs",
+      "what_it_supports": "the npu1 tenants were the same concurrent workload across the window (PIDs changed because processes were recycled), and the gate ran successfully despite them",
+      "what_it_does_NOT_support": "it is an instantaneous snapshot, so it cannot be read as the machine being busy throughout, nor as this run having a card to itself. Tenants come and go - npu0 emptied between the two snapshots."
+    },
+    "failed_receipt_kept": "artifacts/final/build-FAILED-sourcewrite/ - the pre-fix failure, kept so the defect is on record as something a run found",
+    "synthetic_vs_real": {
+      "real": "artifacts/final/build, artifacts/final/smoke, artifacts/smoke/, artifacts/lease-selftest/",
+      "synthetic": "artifacts/engine-window/ (fixture-synthesized, device id deliberately set to 99, which does not exist on this host)"
+    }
+  }
+}

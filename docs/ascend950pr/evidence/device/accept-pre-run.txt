@@ -1,0 +1,45 @@
+=== pre-run, 2026-11-02T12:52:54+08:00 ===
+--- npu-smi info ---
++-------------------------------------------------------------------------------------------------+
+| npu-smi 25.7.rc1                                 Version: 25.7.rc1                              |
++--------+------------------+---------------+-----------------------------------------------------+
+| NPU ID | Name             | Health        | Power(W)    Temp(C)           Hugepages-Usage(page) |
+|        |                  | Bus-Id        | NPU Util(%) Memory-Usage(MB)  HBM-Usage(MB)         |
++========+==================+===============+=====================================================+
+| 0      | Ascend950PR      | Alarm         | 337.9       69                0     / 0             |
+|        |                  | 0000:D7:00.0  | 97          0    / 0          19483 / 131072        |
++========+==================+===============+=====================================================+
+| 1      | Ascend950PR      | OK            | 363.5       67                0     / 0             |
+|        |                  | 0000:55:00.0  | 100         0    / 0          9096  / 131072        |
++========+==================+===============+=====================================================+
++---------------------------+---------------+-----------------------------------------------------+
+| NPU ID                    | Process id    | Process name             | Process memory(MB)       |
++===========================+===============+=====================================================+
+| 0                         | 4177984       | python                   | 13819                   |
++===========================+===============+=====================================================+
+| 1                         | 43649         | as2_llm                  | 1641                    |
+| 1                         | 45309         | python3                  | 751                     |
++===========================+===============+=====================================================+
+--- third-party processes (not me) ---
+   4278 root      1-18:35:53 networkd-dispat /usr/bin/python3 /usr/bin/networkd-dispatcher --run-startup-triggers
+   4339 w008899+  1-18:35:53 sh              /bin/sh -c setsid nohup python3 /home/w00889928/npuir-env/bin/logproxy.py >/dev/null 2>&1
+   4384 w008899+  1-18:35:53 python3         python3 /home/w00889928/npuir-env/bin/logproxy.py
+   4505 root      1-18:35:53 unattended-upgr /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+  17243 m009512+  1-18:34:54 sh              /bin/sh -c /usr/bin/python3 /var/tmp/tbe-auth-guard-m00951283/auth_permission_guard.py >/dev/null 2>&1
+  17244 m009512+  1-18:34:54 python3         /usr/bin/python3 /var/tmp/tbe-auth-guard-m00951283/auth_permission_guard.py
+ 172580 h009678+  1-18:13:52 python3         python3 /home/h00967832/.local/bin/gptplus5-proxy
+ 277780 m009512+  1-17:55:50 pet             /home/m00951283/.vscode-server/extensions/ms-python.vscode-python-envs-1.41.2026102301/python-env-tools/bin/pet server
+ 278682 m009512+  1-17:55:46 MainThread      /home/m00951283/.vscode-server/cli/servers/Stable-6d62b1d5dace93a33b3a6d3eca1317bd5e15bcb1/server/node /home/m00951283/.vscode-server/extensions/ms-python.vscode-pylance-2026.4.101/dist/server.bundle.js --cancellationReceive=file:873395cccfb5a2547f321588b57267131d5a61f75b --node-ipc --clientProcessId=277432
+1526207 h009514+  1-14:32:50 pet             /home/h00951476/.vscode-server/extensions/ms-python.vscode-python-envs-1.40.0/python-env-tools/bin/pet server
+1526604 h009514+  1-14:32:49 MainThread      /home/h00951476/.vscode-server/cli/servers/Stable-125df4672b8a6a34975303c6b0baa124e560a4f7/server/node /home/h00951476/.vscode-server/extensions/ms-python.vscode-pylance-2026.4.1/dist/server.bundle.js --cancellationReceive=file:e9a6da17ceb63f29ceb040304dd6c82d99e559ecc2 --node-ipc --clientProcessId=1523895
+1939473 s006531+  1-12:45:36 python          /home/s00653124/workspace/AgentGates/.venv/bin/python -s -m agent_gates.mcp_server
+1939474 s006531+  1-12:45:36 python          /home/s00653124/workspace/AgentGates/.venv/bin/python -s -m agent_gates.mcp_server
+2665906 m009512+    14:25:53 python3         python3 /home/m00951283/.local/share/tbe-tunnel/watchdog.py run
+4167282 y009536+    03:48:43 pet             /home/y00953696/.vscode-server/extensions/ms-python.vscode-python-envs-1.40.0/python-env-tools/bin/pet server
+4168254 y009536+    03:48:41 MainThread      /home/y00953696/.vscode-server/cli/servers/Stable-04c0d99f4fb0d8afe6ce4f0c58e31e183ac3e4b1/server/node /home/y00953696/.vscode-server/extensions/ms-python.vscode-pylance-2026.4.1/dist/server.bundle.js --cancellationReceive=file:bcfe5b5ce8c0e01347f1acca5283c269a61a59221a --node-ipc --clientProcessId=4166738
+ 173445 j009371+    03:25:05 sh              sh /home/j00937167/.vscode-server/cli/servers/Stable-2c33b50b16c472efe58357d1d2a8a5414bc23fbf/server/bin/code-server --connection-token=remotessh --accept-server-license-terms --install-extension=ms-python.python --install-extension=ms-toolsai.jupyter-renderers --install-extension=ms-toolsai.jupyter-keymap --install-extension=ms-toolsai.jupyter --agent-host-bridge-port=40045 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-df5e5761-bc3d-4f9c-bddf-45eba01e188b
+ 173449 j009371+    03:25:05 MainThread      /home/j00937167/.vscode-server/cli/servers/Stable-2c33b50b16c472efe58357d1d2a8a5414bc23fbf/server/node /home/j00937167/.vscode-server/cli/servers/Stable-2c33b50b16c472efe58357d1d2a8a5414bc23fbf/server/out/server-main.js --connection-token=remotessh --accept-server-license-terms --install-extension=ms-python.python --install-extension=ms-toolsai.jupyter-renderers --install-extension=ms-toolsai.jupyter-keymap --install-extension=ms-toolsai.jupyter --agent-host-bridge-port=40045 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-df5e5761-bc3d-4f9c-bddf-45eba01e188b
+ 268466 m009512+    03:12:20 pet             /home/m00951283/.vscode-server/extensions/ms-python.vscode-python-envs-1.41.2026102301/python-env-tools/bin/pet server
+ 271074 m009512+    03:12:08 MainThread      /home/m00951283/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node /home/m00951283/.vscode-server/extensions/ms-python.vscode-pylance-2026.4.101/dist/server.bundle.js --cancellationReceive=file:d55fa56e7f438761076c200b4eb21323475cdd3f88 --node-ipc --clientProcessId=267855
+grep: write error: Broken pipe
+grep: write error: Broken pipe

@@ -1,0 +1,125 @@
+{
+  "python": "/home/s00653124/.conda/envs/s00653124_tilelang/bin/python3",
+  "python_version": "3.11.17 (main, Oct  1 2026, 20:17:42) [GCC 14.3.0]",
+  "device_execution_performed": false,
+  "repositories": {
+    "ForgeKernel": {
+      "path": "/home/s00653124/workspace/ForgeKernel",
+      "revision": {
+        "exit_code": 0,
+        "stdout": "5030503d3ff71851aa34c14b9caf13ebfa9d9a78",
+        "stderr": ""
+      },
+      "status": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    "AgentGates": {
+      "path": "/home/s00653124/workspace/AgentGates",
+      "revision": {
+        "exit_code": 0,
+        "stdout": "a72c5c9aa7712835e1c210289291e00d0bd0deb7",
+        "stderr": ""
+      },
+      "status": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    "tilelang": {
+      "path": "/home/s00653124/workspace/tilelang",
+      "revision": {
+        "exit_code": 0,
+        "stdout": "8e2d3c823b0c3a01d2ce68d47dabfe98e35cc22b",
+        "stderr": ""
+      },
+      "status": {
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    }
+  },
+  "imports": {
+    "torch": {
+      "ok": true,
+      "file": "/home/s00653124/.conda/envs/s00653124_tilelang/lib/python3.11/site-packages/torch/__init__.py",
+      "version": "2.10.0+cpu"
+    },
+    "torch_npu": {
+      "ok": true,
+      "file": "/home/s00653124/.conda/envs/s00653124_tilelang/lib/python3.11/site-packages/torch_npu/__init__.py",
+      "version": "2.10.0.post7.dev20261011"
+    },
+    "tilelang": {
+      "ok": true,
+      "file": "/home/s00653124/workspace/tilelang/tilelang/__init__.py",
+      "version": "0.1.15+cuda.git8e2d3c82"
+    },
+    "tilelang.ascend.language": {
+      "ok": true,
+      "file": "/home/s00653124/workspace/tilelang/tilelang/ascend/language/__init__.py",
+      "version": null
+    }
+  },
+  "libraries": {
+    "/home/s00653124/workspace/tilelang/build/lib/libstub_ascendcl.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/libstub_ascendcl.so",
+      "sha256": "3c8ea28eaf69aa11f2f6615a5fcbaf579b3d04c18b278c3191294216709729c4"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/libstub_hip.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/libstub_hip.so",
+      "sha256": "eede2846299abb90a91324bdd5d1ab9eb9d0fbd17551cca07dc0734564a4e5c8"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/libstub_hiprtc.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/libstub_hiprtc.so",
+      "sha256": "9dc570171c4685d3fda5cec301a6c069aa007f5dca40209e9a20c56423e5bcc7"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/libtilelang.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/libtilelang.so",
+      "sha256": "d240c0fd675ac4db9d1160956e5b8415beb5b3ed9010b89723a4e51624530f0c"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/libtvm_compiler.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/libtvm_compiler.so",
+      "sha256": "1f584c84dc11b82b1718702cf42992892ea940d1452449ac9f08c113e425fd50"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/libtvm_ffi.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/libtvm_ffi.so",
+      "sha256": "b93f1f4673572e0d82b19171f98561f31237490f19340ec646b8a258c1a0c710"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/libtvm_runtime.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/libtvm_runtime.so",
+      "sha256": "035c2a67e43ab883dd9313111c750cab0109f45a208a7355c9866b23338c4b96"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/libz3.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/libz3.so",
+      "sha256": "56d9977b9276bcb8cda9973a14058fcaa9f3bfee14ed57408b9faacd76d4d8f3"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/tilelang_ascend_npu_exchange.abi3.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/tilelang_ascend_npu_exchange.abi3.so",
+      "sha256": "ca933f130f9a703e5dd520c3dec1b4f727642f83ddf912bae99fec10a4883053"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/tilelang_cython_wrapper.abi3.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/tilelang_cython_wrapper.abi3.so",
+      "sha256": "6c47da39a89f726a8dc1deaceef55af6ad84a1edb96e1a1fc5bdb71e126b9858"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/tilelang_deepgemm_heuristics.abi3.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/tilelang_deepgemm_heuristics.abi3.so",
+      "sha256": "9c1f008da1c6e6479dd29bc695f97f0797778baeed6ba678a105222bcf553660"
+    },
+    "/home/s00653124/workspace/tilelang/build/lib/tilelang_pto_wrapper.abi3.so": {
+      "resolved": "/home/s00653124/workspace/tilelang/build/lib/tilelang_pto_wrapper.abi3.so",
+      "sha256": "922b861851e4705d05369f648bf54a15187b60c2ef9eaaa35dc6281e31adc69b"
+    }
+  },
+  "executables": {
+    "bishengir-compile": "/data/pri/cann-9.2.0/cann-9.2.0-beta.2/bin/bishengir-compile",
+    "ccec": "/data/pri/cann-9.2.0/cann-9.2.0-beta.2/bin/ccec",
+    "npu-smi": "/usr/local/bin/npu-smi",
+    "claude": "/home/s00653124/.local/bin/claude"
+  },
+  "ascend_home_path": "/data/pri/cann-9.2.0/cann-9.2.0-beta.2"
+}

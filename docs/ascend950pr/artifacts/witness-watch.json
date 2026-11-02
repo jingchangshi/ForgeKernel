@@ -1,0 +1,189 @@
+{
+ "card": "1",
+ "samples": [
+  {
+   "t": 1.8,
+   "util": 0,
+   "hbmUsed": 5521,
+   "tenants": [],
+   "npuWorkElsewhere": [
+    {
+     "pid": "17243",
+     "user": "m009512+",
+     "etime": "1-18:43:52",
+     "cmd": "/bin/sh -c /usr/bin/python3 /var/tmp/tbe-auth-guard-m00951283/auth_permission_guard.py >/dev/null 2>&1"
+    },
+    {
+     "pid": "17244",
+     "user": "m009512+",
+     "etime": "1-18:43:52",
+     "cmd": "/usr/bin/python3 /var/tmp/tbe-auth-guard-m00951283/auth_permission_guard.py"
+    },
+    {
+     "pid": "91427",
+     "user": "mwx1513+",
+     "etime": "05:06",
+     "cmd": "flock -x /tmp/ascend_eval_npu_0.lock timeout --signal=TERM --kill-after=30s 3555s bash -lc export PYTHONPATH=/home/mwx1513432/w033/kernel_ve"
+    },
+    {
+     "pid": "91431",
+     "user": "mwx1513+",
+     "etime": "05:06",
+     "cmd": "timeout --signal=TERM --kill-after=30s 3555s bash -lc export PYTHONPATH=/home/mwx1513432/w033/kernel_verify/chunk_cumsum_kernel_1793595386/t"
+    },
+    {
+     "pid": "91433",
+     "user": "mwx1513+",
+     "etime": "05:06",
+     "cmd": "/home/mwx1513432/opt/miniconda3/bin/python /home/mwx1513432/miniconda3/bin/conda run -n a5-cann92-w030 python -P -m ascend_eval evaluate-har"
+    },
+    {
+     "pid": "91674",
+     "user": "mwx1513+",
+     "etime": "05:05",
+     "cmd": "python -P -m ascend_eval evaluate-hardware --contract c8b64d054c0b55167b7ad4e204e3f47dd911baa5b5557624ffb8aa6fcbc8b08f.json --dataset-root /"
+    },
+    {
+     "pid": "989421",
+     "user": "m009353+",
+     "etime": "02:25:13",
+     "cmd": "docker run --rm -it --privileged --ipc=host --pid=host --device=/dev/davinci0 --device=/dev/davinci1 --device=/dev/davinci_manager --device="
+    }
+   ]
+  },
+  {
+   "t": 20.6,
+   "util": 0,
+   "hbmUsed": 5482,
+   "tenants": [
+    {
+     "pid": "151929",
+     "name": "python3",
+     "mb": "54"
+    },
+    {
+     "pid": "147892",
+     "name": "python3",
+     "mb": "58"
+    },
+    {
+     "pid": "149657",
+     "name": "python3",
+     "mb": "58"
+    }
+   ],
+   "npuWorkElsewhere": [
+    {
+     "pid": "17243",
+     "user": "m009512+",
+     "etime": "1-18:44:11",
+     "cmd": "/bin/sh -c /usr/bin/python3 /var/tmp/tbe-auth-guard-m00951283/auth_permission_guard.py >/dev/null 2>&1"
+    },
+    {
+     "pid": "17244",
+     "user": "m009512+",
+     "etime": "1-18:44:11",
+     "cmd": "/usr/bin/python3 /var/tmp/tbe-auth-guard-m00951283/auth_permission_guard.py"
+    },
+    {
+     "pid": "91427",
+     "user": "mwx1513+",
+     "etime": "05:25",
+     "cmd": "flock -x /tmp/ascend_eval_npu_0.lock timeout --signal=TERM --kill-after=30s 3555s bash -lc export PYTHONPATH=/home/mwx1513432/w033/kernel_ve"
+    },
+    {
+     "pid": "91431",
+     "user": "mwx1513+",
+     "etime": "05:25",
+     "cmd": "timeout --signal=TERM --kill-after=30s 3555s bash -lc export PYTHONPATH=/home/mwx1513432/w033/kernel_verify/chunk_cumsum_kernel_1793595386/t"
+    },
+    {
+     "pid": "91433",
+     "user": "mwx1513+",
+     "etime": "05:25",
+     "cmd": "/home/mwx1513432/opt/miniconda3/bin/python /home/mwx1513432/miniconda3/bin/conda run -n a5-cann92-w030 python -P -m ascend_eval evaluate-har"
+    },
+    {
+     "pid": "91674",
+     "user": "mwx1513+",
+     "etime": "05:24",
+     "cmd": "python -P -m ascend_eval evaluate-hardware --contract c8b64d054c0b55167b7ad4e204e3f47dd911baa5b5557624ffb8aa6fcbc8b08f.json --dataset-root /"
+    },
+    {
+     "pid": "989421",
+     "user": "m009353+",
+     "etime": "02:25:32",
+     "cmd": "docker run --rm -it --privileged --ipc=host --pid=host --device=/dev/davinci0 --device=/dev/davinci1 --device=/dev/davinci_manager --device="
+    }
+   ]
+  }
+ ],
+ "hit": {
+  "t": 20.6,
+  "util": 0,
+  "hbmUsed": 5482,
+  "tenants": [
+   {
+    "pid": "151929",
+    "name": "python3",
+    "mb": "54"
+   },
+   {
+    "pid": "147892",
+    "name": "python3",
+    "mb": "58"
+   },
+   {
+    "pid": "149657",
+    "name": "python3",
+    "mb": "58"
+   }
+  ],
+  "npuWorkElsewhere": [
+   {
+    "pid": "17243",
+    "user": "m009512+",
+    "etime": "1-18:44:11",
+    "cmd": "/bin/sh -c /usr/bin/python3 /var/tmp/tbe-auth-guard-m00951283/auth_permission_guard.py >/dev/null 2>&1"
+   },
+   {
+    "pid": "17244",
+    "user": "m009512+",
+    "etime": "1-18:44:11",
+    "cmd": "/usr/bin/python3 /var/tmp/tbe-auth-guard-m00951283/auth_permission_guard.py"
+   },
+   {
+    "pid": "91427",
+    "user": "mwx1513+",
+    "etime": "05:25",
+    "cmd": "flock -x /tmp/ascend_eval_npu_0.lock timeout --signal=TERM --kill-after=30s 3555s bash -lc export PYTHONPATH=/home/mwx1513432/w033/kernel_ve"
+   },
+   {
+    "pid": "91431",
+    "user": "mwx1513+",
+    "etime": "05:25",
+    "cmd": "timeout --signal=TERM --kill-after=30s 3555s bash -lc export PYTHONPATH=/home/mwx1513432/w033/kernel_verify/chunk_cumsum_kernel_1793595386/t"
+   },
+   {
+    "pid": "91433",
+    "user": "mwx1513+",
+    "etime": "05:25",
+    "cmd": "/home/mwx1513432/opt/miniconda3/bin/python /home/mwx1513432/miniconda3/bin/conda run -n a5-cann92-w030 python -P -m ascend_eval evaluate-har"
+   },
+   {
+    "pid": "91674",
+    "user": "mwx1513+",
+    "etime": "05:24",
+    "cmd": "python -P -m ascend_eval evaluate-hardware --contract c8b64d054c0b55167b7ad4e204e3f47dd911baa5b5557624ffb8aa6fcbc8b08f.json --dataset-root /"
+   },
+   {
+    "pid": "989421",
+    "user": "m009353+",
+    "etime": "02:25:32",
+    "cmd": "docker run --rm -it --privileged --ipc=host --pid=host --device=/dev/davinci0 --device=/dev/davinci1 --device=/dev/davinci_manager --device="
+   }
+  ]
+ },
+ "waitedSeconds": 20.6,
+ "contentionCriterion": "an NPU process on this card, or AICore utilisation > 5%. NPU-shaped commands from other users are recorded separately: they may be pinned to another card (mwx1513432 runs under flock /tmp/ascend_eval_npu_0.lock), so they are evidence of a busy machine, not proof that THIS card is contended."
+}

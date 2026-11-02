@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-02",
+  "command": "python3 -m pytest tests -q --ignore=tests/test_loop_driver.py",
+  "environment": {
+    "cann": "/data/pri/cann-9.2.0/cann/set_env.sh",
+    "TORCH_DEVICE_BACKEND_AUTOLOAD": "0"
+  },
+  "pristine_HEAD": {
+    "commit": "5030503d3ff71851aa34c14b9caf13ebfa9d9a78",
+    "failed": 3,
+    "passed": 1632,
+    "skipped": 1
+  },
+  "patched_tree": {
+    "branch": "ascend950pr",
+    "frozen_commit": "c4cac38d334474988c36d547561b1625b8778cf6",
+    "failed": 3,
+    "passed": 1690,
+    "skipped": 1,
+    "new_passing_tests": 58
+  },
+  "failure_sets_identical": true,
+  "stable_failures": [
+    "tests/test_task_suite.py::test_a_file_group_supplies_every_input (ModuleNotFoundError: safetensors)",
+    "tests/test_task_suite.py::test_an_input_off_the_signature_is_an_input_error (ModuleNotFoundError: safetensors)",
+    "tests/test_harness_guard.py::test_a_card_that_tracks_no_harness_overlays_nothing (the test runs git rm -q -r --cached, which exits 128 on this host; it reproduces on a pristine worktree)"
+  ],
+  "excluded_module": {
+    "name": "tests/test_loop_driver.py",
+    "reason": "genuinely flaky at HEAD: three consecutive pristine runs gave 15/17/18 failures with a different set each time",
+    "independent_reproduction": "both the Lead and the implementer observed a varying failure set with no code change"
+  },
+  "verdict": "No regression attributable to the patches. The three stable failures are pre-existing and unrelated; the additional passing tests are all newly added coverage.",
+  "recorded_by": "lead, comparing the pristine detached worktree at /tmp/fk-pristine against the patched tree at the same moment"
+}

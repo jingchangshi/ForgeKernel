@@ -1,0 +1,288 @@
+{
+ "schema": 1,
+ "measuredOn": "2026-11-02T12:44:54+0800",
+ "host": "Ascend950PR, CANN 9.2.0, torch_npu 2.10.0.post7.dev20261011",
+ "provenance": {
+  "measuredBy": "accept-verify, via artifacts/measure_precision_matrix.py",
+  "sourceData": "artifacts/precision-matrix.json",
+  "independentlyRecomputedBy": "Lead, from the same file, agreement confirmed",
+  "acceptScript": "/home/s00653124/workspace/forgekernel-ascend950pr-work/sources/AgentGates/agent_gates/adapters/forgekernel-ascend-npu/scripts/accept_rmsnorm.py",
+  "acceptScriptSha256": "9d4488b2966e122f9f2327b95a1d0785cbb344b0bfad1bc2a99cd225cda14b32",
+  "ulpReference": "2**-7 = 0.0078125, one bf16 ulp at the top of a binade"
+ },
+ "shapes": [
+  {
+   "shape": "8192x4096",
+   "family": "normal",
+   "vendor": {
+    "rel_l2": 1.52e-05,
+    "max_rel": 0.0078125,
+    "ulp": 1.0
+   },
+   "correctFp32": {
+    "rel_l2": 1.454e-05,
+    "max_rel": 0.0078125,
+    "ulp": 1.0,
+    "fractionOfLimit": 0.0036792894467148297
+   },
+   "bf16Accumulating": {
+    "rel_l2": 0.01076526,
+    "max_rel": 0.04316547,
+    "ulp": 5.5252,
+    "multipleOfLimit": 3.6834534399999996
+   },
+   "maxRelLimit": {
+    "value": 0.01171875,
+    "ulp": 1.5
+   },
+   "relL2Limit": 0.00395185
+  },
+  {
+   "shape": "8192x4096",
+   "family": "near_zero_rows",
+   "vendor": {
+    "rel_l2": 1.591e-05,
+    "max_rel": 0.00775194,
+    "ulp": 0.9922
+   },
+   "correctFp32": {
+    "rel_l2": 1.792e-05,
+    "max_rel": 0.00775194,
+    "ulp": 0.9922,
+    "fractionOfLimit": 0.004532142297128463
+   },
+   "bf16Accumulating": {
+    "rel_l2": 0.00510682,
+    "max_rel": 0.02649007,
+    "ulp": 3.3907,
+    "multipleOfLimit": 2.278145427682189
+   },
+   "maxRelLimit": {
+    "value": 0.01162791,
+    "ulp": 1.4884
+   },
+   "relL2Limit": 0.00395398
+  },
+  {
+   "shape": "8192x4096",
+   "family": "outlier_channels",
+   "vendor": {
+    "rel_l2": 4.12e-06,
+    "max_rel": 0.00775194,
+    "ulp": 0.9922
+   },
+   "correctFp32": {
+    "rel_l2": 4.35e-06,
+    "max_rel": 0.00775194,
+    "ulp": 0.9922,
+    "fractionOfLimit": 0.0011100875055185383
+   },
+   "bf16Accumulating": {
+    "rel_l2": 0.02270642,
+    "max_rel": 0.02919708,
+    "ulp": 3.7372,
+    "multipleOfLimit": 2.510948227153461
+   },
+   "maxRelLimit": {
+    "value": 0.01162791,
+    "ulp": 1.4884
+   },
+   "relL2Limit": 0.00391861
+  },
+  {
+   "shape": "64x4096",
+   "family": "normal",
+   "vendor": {
+    "rel_l2": 0.0,
+    "max_rel": 0.0,
+    "ulp": 0.0
+   },
+   "correctFp32": {
+    "rel_l2": 0.0,
+    "max_rel": 0.0,
+    "ulp": 0.0,
+    "fractionOfLimit": 0.0
+   },
+   "bf16Accumulating": {
+    "rel_l2": 0.01059748,
+    "max_rel": 0.03225806,
+    "ulp": 4.129,
+    "multipleOfLimit": 4.12903168
+   },
+   "maxRelLimit": {
+    "value": 0.0078125,
+    "ulp": 1.0
+   },
+   "relL2Limit": 0.00390625
+  },
+  {
+   "shape": "64x4096",
+   "family": "near_zero_rows",
+   "vendor": {
+    "rel_l2": 2.69e-06,
+    "max_rel": 0.00413223,
+    "ulp": 0.5289
+   },
+   "correctFp32": {
+    "rel_l2": 1.108e-05,
+    "max_rel": 0.00549451,
+    "ulp": 0.7033,
+    "fractionOfLimit": 0.002830632140448405
+   },
+   "bf16Accumulating": {
+    "rel_l2": 0.00493984,
+    "max_rel": 0.01604278,
+    "ulp": 2.0535,
+    "multipleOfLimit": 2.05347584
+   },
+   "maxRelLimit": {
+    "value": 0.0078125,
+    "ulp": 1.0
+   },
+   "relL2Limit": 0.00391432
+  },
+  {
+   "shape": "64x4096",
+   "family": "outlier_channels",
+   "vendor": {
+    "rel_l2": 6.5e-06,
+    "max_rel": 0.00469484,
+    "ulp": 0.6009
+   },
+   "correctFp32": {
+    "rel_l2": 2.17e-06,
+    "max_rel": 0.00409836,
+    "ulp": 0.5246,
+    "fractionOfLimit": 0.0005527606189900018
+   },
+   "bf16Accumulating": {
+    "rel_l2": 0.02271034,
+    "max_rel": 0.02857143,
+    "ulp": 3.6571,
+    "multipleOfLimit": 3.65714304
+   },
+   "maxRelLimit": {
+    "value": 0.0078125,
+    "ulp": 1.0
+   },
+   "relL2Limit": 0.00392575
+  }
+ ],
+ "summary": {
+  "correctFp32UlpRange": [
+   0.0,
+   1.0
+  ],
+  "bf16AccumulatingUlpRange": [
+   2.0535,
+   5.5252
+  ],
+  "bf16MultipleOfLimit": {
+   "min": 2.05347584,
+   "max": 4.12903168
+  },
+  "vendorUlpRange": [
+   0.0,
+   1.0
+  ],
+  "narrowestRejection": {
+   "shape": "64x4096",
+   "family": "near_zero_rows",
+   "bf16Ulp": 2.0535,
+   "limitUlp": 1.0,
+   "multiple": 2.05347584,
+   "note": "This is the margin the rejection actually rests on. Quoting \"3.4-5.5 ulp\" overstates it: that range comes from the 8192x4096 shape only. An earlier claim did exactly that and was corrected."
+  },
+  "p2WideningBoundary": {
+   "rule": "max(2**-7, 1.5 * max_rel_vendor); the floor binds while vendor_max_rel <= 2**-7 / 1.5",
+   "floorStopsBindingAboveUlp": 0.6667,
+   "derivation": "1.5 * (u * 2**-7) <= 2**-7  <=>  u <= 1/1.5 = 0.6667 ulp",
+   "perShape": [
+    {
+     "shape": "8192x4096",
+     "family": "normal",
+     "vendorUlp": 1.0,
+     "limitUlp": 1.5,
+     "widened": true,
+     "headroomToWideningUlp": -0.3333
+    },
+    {
+     "shape": "8192x4096",
+     "family": "near_zero_rows",
+     "vendorUlp": 0.9922,
+     "limitUlp": 1.4884,
+     "widened": true,
+     "headroomToWideningUlp": -0.3255
+    },
+    {
+     "shape": "8192x4096",
+     "family": "outlier_channels",
+     "vendorUlp": 0.9922,
+     "limitUlp": 1.4884,
+     "widened": true,
+     "headroomToWideningUlp": -0.3255
+    },
+    {
+     "shape": "64x4096",
+     "family": "normal",
+     "vendorUlp": 0.0,
+     "limitUlp": 1.0,
+     "widened": false,
+     "headroomToWideningUlp": 0.6667
+    },
+    {
+     "shape": "64x4096",
+     "family": "near_zero_rows",
+     "vendorUlp": 0.5289,
+     "limitUlp": 1.0,
+     "widened": false,
+     "headroomToWideningUlp": 0.1378
+    },
+    {
+     "shape": "64x4096",
+     "family": "outlier_channels",
+     "vendorUlp": 0.6009,
+     "limitUlp": 1.0,
+     "widened": false,
+     "headroomToWideningUlp": 0.0658,
+     "headroomNote": "0.6667 - 0.6009 = 0.0658 if both are rounded to 4 dp; exact headroom is 0.0666... - 0.60090... = 0.06576..., i.e. 0.0658 to 4 dp. Same number, rounded once."
+    }
+   ],
+   "largestVendorUlpWhereFloorStillBinds": 0.601,
+   "tightestHeadroomUlp": 0.066,
+   "note": "P2 widens once the vendor reaches 0.6667 ulp (1/1.5 exactly, not representable in decimal). The tightest still-binding case is 64x4096/outlier_channels at 0.6009 ulp, leaving 0.0658 ulp to 4 dp (0.06576 exactly). 1.5x is safe on the measured shapes, not structurally safe.",
+   "boundaryUlpExact": "1/1.5 = 0.666... (repeating); NOT exactly representable",
+   "boundaryUlpRounded": 0.6667,
+   "tightestVendorUlpExact": 0.6009009009009009
+  },
+  "floorCheck": {
+   "worstFractionOfLimitUsedByCorrectFp32": 0.004532142297128463,
+   "headroomFactor": 220.6,
+   "verdict": "the floor cannot false-fail an honest fp32 kernel"
+  },
+  "allSixCombinationsRejected": true,
+  "allSixHonestCombinationsPass": true
+ },
+ "negativeControlFourBeforeAfter": {
+  "defect": "audit_host_bound could not rederive the aggregate when the evidence carried only ratios, because it demanded BOTH hostEnqueueMs and deviceMedianMs on every workload. With the reported shape [0.04, 0.88] the rederived value was None and verdictFlips was False, so the whole point of the control - that the maximum blocks a baseline the geometric mean would pass - was silently not being tested.",
+  "before": {
+   "rederivedRatioOfGeomeans": null,
+   "verdictFlips": false,
+   "valid": false
+  },
+  "after": {
+   "rederivedRatioOfGeomeans": 0.18761663,
+   "verdictOnMax": "invalid",
+   "verdictOnRederived": "valid",
+   "verdictFlips": true,
+   "valid": false
+  },
+  "identity": "geomean(a_i)/geomean(b_i) is identically the geometric mean of the per-workload ratios, so it is computable from the ratios alone.",
+  "independentCheck": {
+   "expected": 0.1876166303929372,
+   "computed": 0.18761663
+  },
+  "caughtBy": "test_the_aggregated_ratio_flips_the_verdict",
+  "significance": "A negative control that reports success while its central assertion evaluates against None is worse than no control: it certifies the exact defect it was written to detect."
+ }
+}

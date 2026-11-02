@@ -1,0 +1,102 @@
+{
+ "shapes": {
+  "8192x4096": {
+   "families": {
+    "normal": {
+     "vendor_rel_l2": 1.52e-05,
+     "vendor_max_rel": 0.0078125,
+     "vendor_mean_abs": 2.87e-08,
+     "vendor_max_abs": 0.03125,
+     "fp32_rel_l2": 1.454e-05,
+     "fp32_max_rel": 0.0078125,
+     "fp32_mean_abs": 2.74e-08,
+     "fp32_max_abs": 0.03125,
+     "bf16_rel_l2": 0.01076526,
+     "bf16_max_rel": 0.04316547,
+     "bf16_mean_abs": 0.0055900869,
+     "bf16_max_abs": 0.3125
+    },
+    "near_zero_rows": {
+     "vendor_rel_l2": 1.591e-05,
+     "vendor_max_rel": 0.00775194,
+     "vendor_mean_abs": 1.87e-08,
+     "vendor_max_abs": 0.015625,
+     "fp32_rel_l2": 1.792e-05,
+     "fp32_max_rel": 0.00775194,
+     "fp32_mean_abs": 2.39e-08,
+     "fp32_max_abs": 0.015625,
+     "bf16_rel_l2": 0.00510682,
+     "bf16_max_rel": 0.02649007,
+     "bf16_mean_abs": 0.0016417253,
+     "bf16_max_abs": 0.125
+    },
+    "outlier_channels": {
+     "vendor_rel_l2": 4.12e-06,
+     "vendor_max_rel": 0.00775194,
+     "vendor_mean_abs": 7.1e-09,
+     "vendor_max_abs": 0.0078125,
+     "fp32_rel_l2": 4.35e-06,
+     "fp32_max_rel": 0.00775194,
+     "fp32_mean_abs": 8.6e-09,
+     "fp32_max_abs": 0.00390625,
+     "bf16_rel_l2": 0.02270642,
+     "bf16_max_rel": 0.02919708,
+     "bf16_mean_abs": 0.0030263235,
+     "bf16_max_abs": 1.25
+    }
+   },
+   "compile_s": 4.1
+  },
+  "64x4096": {
+   "families": {
+    "normal": {
+     "vendor_rel_l2": 0.0,
+     "vendor_max_rel": 0.0,
+     "vendor_mean_abs": 0.0,
+     "vendor_max_abs": 0.0,
+     "fp32_rel_l2": 0.0,
+     "fp32_max_rel": 0.0,
+     "fp32_mean_abs": 0.0,
+     "fp32_max_abs": 0.0,
+     "bf16_rel_l2": 0.01059748,
+     "bf16_max_rel": 0.03225806,
+     "bf16_mean_abs": 0.0055838736,
+     "bf16_max_abs": 0.15625
+    },
+    "near_zero_rows": {
+     "vendor_rel_l2": 2.69e-06,
+     "vendor_max_rel": 0.00413223,
+     "vendor_mean_abs": 3.7e-09,
+     "vendor_max_abs": 0.00097656,
+     "fp32_rel_l2": 1.108e-05,
+     "fp32_max_rel": 0.00549451,
+     "fp32_mean_abs": 1.86e-08,
+     "fp32_max_abs": 0.00390625,
+     "bf16_rel_l2": 0.00493984,
+     "bf16_max_rel": 0.01604278,
+     "bf16_mean_abs": 0.0015808094,
+     "bf16_max_abs": 0.0625
+    },
+    "outlier_channels": {
+     "vendor_rel_l2": 6.5e-06,
+     "vendor_max_rel": 0.00469484,
+     "vendor_mean_abs": 1.86e-08,
+     "vendor_max_abs": 0.00195312,
+     "fp32_rel_l2": 2.17e-06,
+     "fp32_max_rel": 0.00409836,
+     "fp32_mean_abs": 3.7e-09,
+     "fp32_max_abs": 0.00097656,
+     "bf16_rel_l2": 0.02271034,
+     "bf16_max_rel": 0.02857143,
+     "bf16_mean_abs": 0.0030416965,
+     "bf16_max_abs": 1.25
+    }
+   },
+   "compile_s": 0.1
+  }
+ },
+ "tolerance": {
+  "bf16_ulp": 0.0078125,
+  "bf16_u": 0.00390625
+ }
+}
