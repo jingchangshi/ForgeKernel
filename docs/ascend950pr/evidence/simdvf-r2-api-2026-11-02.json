@@ -1,0 +1,21 @@
+{
+  "round": 2,
+  "date": "2026-11-02",
+  "topic": "SimdVF bf16 store, scalar broadcast, rstd chain - API bring-up complete",
+  "card": "shared NPU 1",
+  "verified": {
+    "bf16_store": "vcvt(v,\"bf16\") + vsts(...,dist=\"PK_B32\") matches torch bf16 cast exactly",
+    "broadcast": "vdupv(vec, full, pos=\"POS_LOWEST\") broadcasts lane 0 to all lanes",
+    "rstd_chain": "vmuls(1/N) + vadds(eps) + vsqrt + vdiv(1,s) gives 1/sqrt(mean(x^2)+eps) on every lane; err 2.4e-8 vs float64"
+  },
+  "api_recipe": [
+    "bf16 in: vld(dist=\"UNPK_B16\") then vcvt(\"float32\",part=0)",
+    "accumulate: vmula(acc, vf, vf, full) across chunks",
+    "reduce: 6x vcadd(...,full) for 64 lanes -> scalar in lane 0",
+    "broadcast: vdupv(acc, full, pos=\"POS_LOWEST\")",
+    "rstd: vmuls/vadds/vsqrt/vdiv",
+    "bf16 out: vcvt(\"bf16\") then vsts(dist=\"PK_B32\")"
+  ],
+  "status": "all SimdVF API pieces needed by RMSNorm are now verified individually; a full kernel and any timing are NOT yet done",
+  "not_proven": "no end-to-end kernel, no multi-core mapping, no performance measurement, no parity claim"
+}
