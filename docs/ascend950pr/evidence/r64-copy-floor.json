@@ -1,0 +1,45 @@
+{
+  "round": "64",
+  "date": "2026-11-02",
+  "topic": "the measured copy-path floor explains the remaining prefill gap",
+  "microbenchmark": {
+    "note": "pure data movement, no arithmetic: 64MB in and 64MB out through UB, per-core contiguous chunks",
+    "read_only_TBps": {
+      "8KB": 0.843,
+      "16KB": 1.316,
+      "32KB": 1.669,
+      "64KB": 1.981,
+      "128KB": 2.13
+    },
+    "write_only_TBps": {
+      "8KB": 1.121,
+      "16KB": 1.139,
+      "32KB": 1.121,
+      "64KB": 1.143,
+      "128KB": 1.131,
+      "reading": "the write path saturates near 1.13 TB/s and does not respond to chunk size at all"
+    },
+    "copy_TBps_separate_buffers": {
+      "64KB_stages2": 1.711,
+      "64KB_stages3": 1.725,
+      "128KB_stages2": 1.708,
+      "reading": "best aggregate is about 1.73 TB/s and is insensitive to chunk size and pipeline depth"
+    },
+    "copy_floor_ms": 0.0778,
+    "ub_limit_note": "chunk 128KB with stages>=3 and chunk 256KB need dyn_ubuf 393216 B and above and are refused at launch (ACL 107000)"
+  },
+  "comparison": {
+    "ours_full_kernel_ms": 0.074509,
+    "ours_copy_floor_ms": 0.0778,
+    "vendor_full_operator_ms": {
+      "range": "0.0527-0.0645",
+      "aggregate_TBps": "2.0-2.4"
+    }
+  },
+  "conclusion": [
+    "our kernel already runs at or slightly below the time a pure copy of the same bytes takes through the TileLang copy path",
+    "the vendor moves the same bytes faster than that copy path can, so the residual prefill gap sits in the data-movement path, not in our arithmetic schedule",
+    "this is a statement about the measured TileLang copy path on this host; it is not a claim about hardware capability in general, because the vendor evidently uses a path we have not been able to reach from TileLang"
+  ],
+  "status": "prefill remains short; decode remains EXCEED at 1.3160x"
+}
