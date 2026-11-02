@@ -155,12 +155,22 @@ def write_card(run, task, check, machine) -> Path:
     (op_dir / "eval" / "bench.py").write_text(lbmod.BENCH_TEMPLATE.format(**fmt), encoding="utf-8")
     (op_dir / "eval" / "ncu_run.py").write_text(lbmod.NCU_TEMPLATE.format(**fmt), encoding="utf-8")
     entry = op_dir / "gpu_entry.sh"
+    # P4: the entry is rendered per device family. On the Ascend NPU the NVIDIA clock
+    # lock does not apply (the device window is an msprof kernel span) and cupti-python
+    # does not exist, so neither is attempted; the marker, timeout and task dispatch are
+    # the same on both, which is the contract the loop relies on.
+    kind = device.kind_of_arch(task.arch)
+    is_npu = (kind == device.KIND_NPU)
     text = lbmod.GPU_ENTRY_TEMPLATE.format(
-        name=task.name, suite=SUITE, arch=CUTE_ARCH.get(task.arch, task.arch + "a"),
+        name=task.name, suite=SUITE,
+        arch=("" if is_npu else CUTE_ARCH.get(task.arch, task.arch + "a")),
         clock="", mem_clock="", require_lock="0",
-        clock_note="A task runs at the GPU's own clocks unless LB_SM_CLOCK_MHZ / "
-                   "LB_MEM_CLOCK_MHZ pin one (that needs permission to lock); the eval JSON "
-                   "records which (leaderboard.clock).")
+        install_cupti=("0" if is_npu else "1"),
+        clock_note=("On the Ascend NPU the board's NVIDIA clock lock does not apply: the device "
+                    "window is an msprof kernel span, not a locked-clock reading." if is_npu else
+                    "A task runs at the GPU's own clocks unless LB_SM_CLOCK_MHZ / "
+                    "LB_MEM_CLOCK_MHZ pin one (that needs permission to lock); the eval JSON "
+                    "records which (leaderboard.clock)."))
     entry.write_text(text.replace("--launch-count 24", f"--launch-count {ncu_launch_count(problem)}"),
                      encoding="utf-8")
     entry.chmod(0o755)

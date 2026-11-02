@@ -888,7 +888,7 @@ export LB_CLOCK_STATE
 # The board's clock is CUPTI read with cupti-python; without it eval/leaderboard.py falls
 # back to torch.profiler, whose per-op instrumentation reads multi-kernel calls long.
 # Best effort, bounded; bake cupti-python into the image to skip it.
-if [ "${{LB_INSTALL_CUPTI:-1}}" = "1" ] && ! python3 -c "import cupti" 2>/dev/null; then
+if [ "${{LB_INSTALL_CUPTI:-{install_cupti}}}" = "1" ] && ! python3 -c "import cupti" 2>/dev/null; then
     timeout 180 python3 -m pip install -q cupti-python > /dev/null 2>&1 \
         || echo "[gpu_entry.sh] cupti-python not installable — timer falls back to torch.profiler"
 fi
@@ -1010,7 +1010,8 @@ def render_gpu_entry(problem: Problem) -> str:
     clock, mem_clock, require_lock, clock_note = SUITE_CLOCK[problem.suite]
     return GPU_ENTRY_TEMPLATE.format(
         name=problem.name, suite=problem.suite, arch="sm_100a", clock=clock,
-        mem_clock=mem_clock, require_lock=require_lock, clock_note=clock_note)
+        mem_clock=mem_clock, require_lock=require_lock, clock_note=clock_note,
+        install_cupti="1")
 
 
 def render_window_toml(problem: Problem) -> str:
