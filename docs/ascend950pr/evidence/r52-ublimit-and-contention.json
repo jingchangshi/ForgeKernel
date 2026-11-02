@@ -1,0 +1,56 @@
+{
+  "round": "52",
+  "date": "2026-11-02",
+  "topic": "UB limit is enforced at launch (unlimit annotation does not help); partition hypothesis still unmeasurable under external load",
+  "negative_result": {
+    "hypothesis": "T.annotate_unlimit_memory relaxes the per-core UB budget so rows=8 with a double-buffered output (dyn_ubuf 286720 B) can launch",
+    "tested": [
+      "rows=8, stages=2, output versions=2, with the annotation",
+      "rows=8, stages=2, output versions=2, without the annotation"
+    ],
+    "outcome": "both fail at launch: aclrtLaunchKernelWithHostArgs ACL error 107000 with dyn_ubuf_bytes=286720. The annotation does not change the launch-time UB check.",
+    "implication": "the UB budget remains a hard constraint; larger tiles with double-buffered output are not reachable this way"
+  },
+  "partition_experiment": {
+    "hypothesis": "per-core contiguous partitioning raises DMA efficiency versus the interleaved stride",
+    "attempts": [
+      {
+        "status": "RETEST",
+        "quiet": 10,
+        "of": 15
+      },
+      {
+        "status": "RETEST",
+        "quiet": 1,
+        "of": 15,
+        "pid_only": 7,
+        "positive": 7
+      },
+      {
+        "status": "RETEST",
+        "quiet": 0,
+        "of": 15,
+        "pid_only": 11,
+        "positive": 4
+      },
+      {
+        "status": "RETEST",
+        "quiet": 0,
+        "of": 15,
+        "pid_only": 13,
+        "positive": 2,
+        "pids": [
+          384551,
+          432496,
+          438229
+        ]
+      }
+    ],
+    "external_load": "PID 384551 is root running pytest customer_shape_autotune/test__pooled_blocked.py on the measurement device; further unrelated processes appeared during later attempts",
+    "outcome": "unmeasured - four attempts were voided by genuine external contention; no claim is made either way",
+    "raw": "docs/ascend950pr/evidence/accept-v5-partition-r52-retest-raw.json",
+    "sha256": "f38462fbc39027d3a2c8d8283edf5435eb7aa751972a80d3f71c5d7d89099a1b"
+  },
+  "tooling": "docs/ascend950pr/scripts/wait_and_gate.sh polls for an idle device and only then runs the gate; it found idle moments but the external pytest resumed inside the measurement window",
+  "status": "decode EXCEED (v4) stands; prefill 0.757 stands; no new prefill evidence"
+}
