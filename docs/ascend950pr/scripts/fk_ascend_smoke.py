@@ -124,7 +124,7 @@ def rms_norm_fwd(batch: int, d: int, dtype: str):
 
     N_CORES = 64
     TILE = tilelang.next_power_of_2(d)
-    ub_budget = 208 * 1024
+    ub_budget = 250 * 1024  # measured UB ceiling is 256 KiB; keep margin for compiler static shared memory
     rows = 4
     while rows > 1 and (batch % (N_CORES * rows) or (2 * rows + 1) * d * 4 > ub_budget):
         rows //= 2

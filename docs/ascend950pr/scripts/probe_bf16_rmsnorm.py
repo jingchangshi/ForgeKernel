@@ -13,7 +13,7 @@ from tilelang.profiler import do_bench
 def rms_norm_fwd(batch, d, in_dtype="bfloat16"):
     N_CORES = 64
     TILE = tilelang.next_power_of_2(d)
-    ub_budget = 208 * 1024
+    ub_budget = 250 * 1024  # measured UB ceiling is 256 KiB; keep margin for compiler static shared memory
     rows = 4
     while rows > 1 and (batch % (N_CORES * rows) or (rows * d * 2 + rows * d * 4 * 2) > ub_budget):
         rows //= 2

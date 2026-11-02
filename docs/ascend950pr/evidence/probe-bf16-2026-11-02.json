@@ -202,7 +202,7 @@
       "Row tile is a real lever: 1->4 rows buys 1.76x (289us -> 164us), confirming the MTE2-starvation reading.",
       "rows=8 does not fit UB (271360 B requested), so per-core row batching alone cannot close the gap; the example design is at a structural ceiling.",
       "Bandwidth arithmetic: 8192x4096 bf16 = 128 MiB moved. Vendor 51us implies ~2.5 TB/s; our 164us implies ~0.8 TB/s. The gap is DMA/pipeline efficiency, not vector math (vec pipe already 85%).",
-      "Therefore the optimization target is UB budget and copy pipelining for the actual 216 KiB budget, not more arithmetic tuning. This is exactly the feedback the ForgeKernel loop is supposed to discover."
+      "Therefore the optimization target is UB budget and copy pipelining for the measured 256 KiB UB ceiling, not more arithmetic tuning. This is exactly the feedback the ForgeKernel loop is supposed to discover."
     ]
   },
   "vendor_contract_check": {
@@ -750,5 +750,23 @@
       "why: a median resists noise but not systematic shift, and this shift is systematic (2.05x), not random"
     ],
     "supersedes": "An earlier note said an audited neighbour caused only a 3.3% shift and that pairing was essentially immune. That was a LIGHT load. At AICore 99% the shift is 105%, i.e. a different regime, and the earlier statement must not be used to justify judging in a contended window."
+  },
+  "ub_capacity_measurement_2026-11-02": {
+    "question": "what is the usable UB (unified buffer) on this Ascend950PR?",
+    "method": "allocate one shared buffer of a given byte size in a trivial kernel, compile AND run it on the device, and bisect the size. Compilation alone does not enforce the limit; execution does (aclrtLaunchKernelWithHostArgs checks dynamic+static shared memory), so the probe runs the kernel.",
+    "results": {
+      "253952": "ok (248 KiB)",
+      "256000": "ok",
+      "262144": "ok (256 KiB)",
+      "263168": "REJECTED dyn_ubuf_bytes=263168 (257 KiB)",
+      "266240": "REJECTED (260 KiB)",
+      "270336": "REJECTED (264 KiB)",
+      "271360": "REJECTED (265 KiB)"
+    },
+    "conclusion_bytes": 262144,
+    "conclusion": "the per-kernel shared-memory ceiling is exactly 256 KiB = 262144 B (256 KiB passes, 257 KiB fails).",
+    "corroboration": "CANN include/pto/common/buffer_limits.hpp defines PTO_UBUF_SIZE_BYTES as 256*1024 for PTO_NPU_ARCH_A5 (the 950PR generation); A2A3 (910B) is 192*1024.",
+    "corrects": "an earlier note in this evidence file and in perf-report.md said 'about 216 KiB'. That number was never measured and never printed by any error; it was an unsupported guess. The error only ever said dyn_ubuf 271360 bytes > budget without stating the budget. 216 KiB is retracted.",
+    "on_248KB": "248 KiB = 253952 B is below the measured 256 KiB ceiling and is a plausible EFFECTIVE figure once a real kernel compiler-managed static shared memory is subtracted from the same limit; but the hardware/usable ceiling I can reproduce is 256 KiB. Recorded so the difference is visible rather than papered over."
   }
 }
