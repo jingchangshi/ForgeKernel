@@ -1,0 +1,45 @@
+{
+  "round": "48",
+  "date": "2026-11-02",
+  "topic": "independent acceptance in a genuinely clean device window (no co-tenant, including our own runs stopped)",
+  "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_multiacc/kernel.py",
+  "window": {
+    "device": "npu1",
+    "co_tenants": "none (verified via npu-smi before and between shapes)",
+    "quiet_windows": "15/15 for both shapes",
+    "pairs": 15,
+    "repeat": 8
+  },
+  "results": {
+    "decode_64x4096": {
+      "status": "EXCEED",
+      "point": 1.26868758,
+      "interval95": [
+        1.242864624,
+        1.288423244
+      ],
+      "medianCandidateMs": 0.002841,
+      "medianVendorMs": 0.003596,
+      "precision": "pass",
+      "authenticity": "pass",
+      "raw": "docs/ascend950pr/evidence/accept-clean-64x4096-r48-raw.json",
+      "sha256": "850711273d70ef0a13ae65233a307143c1d29c8a53addc1ecebed7d8918ce76a"
+    },
+    "prefill_8192x4096": {
+      "status": "FAIL",
+      "point": 0.756556494,
+      "interval95": [
+        0.754463517,
+        0.759052878
+      ],
+      "medianCandidateMs": 0.087757,
+      "medianVendorMs": 0.064503,
+      "precision": "pass",
+      "authenticity": "pass",
+      "raw": "docs/ascend950pr/evidence/accept-clean-8192x4096-r48-raw.json",
+      "sha256": "e8af93842709935a34daf8af16657a2bcedc49b66a42fba5404b1e693ecc6c08"
+    }
+  },
+  "correction_of_earlier_numbers": "Earlier prefill ratios of 0.53-0.62 were measured while our own ForgeKernel runs were launching jobs on the same device; in clean windows the same candidate is 0.7566. Those earlier numbers must not be used to characterise the candidate or to justify a ceiling.",
+  "status": "decode is demonstrated faster than the vendor under the audited protocol; prefill is ~0.757 and fails. The overall objective (both shapes) is NOT met."
+}
