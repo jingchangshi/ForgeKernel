@@ -1,0 +1,11 @@
+Loading tilelang libs from dev root: /home/s00653124/workspace/tilelang/build
+2026-11-02 20:28:15  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:137): TileLang begins to compile kernel `main` with `out_idx=[2]`
+2026-11-02 20:28:17  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:145): TileLang completes to compile kernel `main`
+{"max_abs": 0.015625, "normalized_by_max": 0.000992063492063492, "hashes": {"base": "8b9686831001fb6051fe9860651d3c021b6c500bbd0ef1365653ea045def002c", "new": "4b83484c9e4f1ceeb13191a875a041bd21e8de7716a7ba39224b3888a5a2e5d9"}}
+{"round": 0, "reads": [{"name": "new", "ms": 0.10763433333333333}, {"name": "base", "ms": 0.11835833333333333}, {"name": "base", "ms": 0.11841366666666667}, {"name": "new", "ms": 0.105168}], "base_over_new": 1.11263817595985}
+{"round": 1, "reads": [{"name": "base", "ms": 0.11890733333333332}, {"name": "new", "ms": 0.10495983333333332}, {"name": "new", "ms": 0.10575733333333333}, {"name": "base", "ms": 0.11841216666666667}], "base_over_new": 1.1262466354979779}
+{"round": 2, "reads": [{"name": "new", "ms": 0.10516683333333333}, {"name": "base", "ms": 0.12718566666666667}, {"name": "base", "ms": 0.11835166666666667}, {"name": "new", "ms": 0.10588983333333332}], "base_over_new": 1.1633716063616406}
+{"round": 3, "reads": [{"name": "base", "ms": 0.11916016666666668}, {"name": "new", "ms": 0.113963}, {"name": "new", "ms": 0.104935}, {"name": "base", "ms": 0.11831016666666667}], "base_over_new": 1.0848446917437955}
+{"round": 4, "reads": [{"name": "new", "ms": 0.11177533333333332}, {"name": "base", "ms": 0.1240645}, {"name": "base", "ms": 0.11827966666666667}, {"name": "new", "ms": 0.10560983333333333}], "base_over_new": 1.114814641600048}
+{"round": 5, "reads": [{"name": "base", "ms": 0.11870883333333333}, {"name": "new", "ms": 0.10555366666666667}, {"name": "new", "ms": 0.11245133333333333}, {"name": "base", "ms": 0.11821416666666668}], "base_over_new": 1.0867778261966468}
+{"median_ratio": 1.113726408779949, "limitations": "single-process screening; no independent contention witness; not vendor acceptance"}
