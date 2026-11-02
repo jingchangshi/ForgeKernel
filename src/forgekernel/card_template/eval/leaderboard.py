@@ -158,6 +158,48 @@ from pathlib import Path
 
 import torch
 
+
+def _fk_dev_module():
+    """The device layer copied beside this file (fk_dev.py)."""
+    import sys as _sys
+    cur = _sys.modules.get("torch")
+    m = _sys.modules.get("fk_dev")
+    if m is not None and getattr(m, "_torch_obj", None) is cur:
+        return m
+    try:
+        import fk_dev as m
+    except Exception:  # noqa: BLE001 -- eval/ is not on sys.path in a bare test harness
+        m = None
+    if m is not None and getattr(m, "_torch_obj", None) is cur:
+        return m
+    # (Re)load against the current torch: a cached copy bound to a different torch
+    # module (a test harness swaps its stub between cases) must not be reused.
+    import importlib.util as _ilu
+    import pathlib as _pl
+    spec = _ilu.spec_from_file_location(
+        "fk_dev", _pl.Path(__file__).resolve().with_name("fk_dev.py"))
+    m = _ilu.module_from_spec(spec)
+    _sys.modules["fk_dev"] = m
+    spec.loader.exec_module(m)
+    return m
+
+
+fk_dev = _fk_dev_module()
+
+
+def problem_device_kind(problem: dict) -> str:
+    """The card's device family from problem.json ``device`` (default cuda).
+
+    The writer fills it via forgekernel.device.kind_of_arch(task.arch); a card
+    without the field predates NPU support and keeps the CUDA behaviour.
+    """
+    return str(problem.get("device") or "cuda").strip().lower()
+
+
+def _is_cuda_kind() -> bool:
+    return fk_dev.kind() != "npu"
+
+
 SUITE_FIB = "flashinfer-bench"
 SUITE_SOL = "sol-execbench"
 # A forgekernel task (``forge new tasks/<op>``): no board -- the judge is the PyTorch
@@ -568,7 +610,7 @@ def kernel_fence(problem: dict) -> str | None:
     card = Path(problem["_dir"]).parent.parent
     kfile = problem.get("kernel_file", "kernel.py")
     src = (card / kfile).read_text()
-    cuda = Path(kfile).suffix in CUDA_KERNEL_SUFFIXES
+    cuda = _is_cuda_kind() and Path(kfile).suffix in CUDA_KERNEL_SUFFIXES
     if cuda:
         try:
             cuda_kernel_flags(src)
@@ -879,8 +921,7 @@ def call_impl(problem: dict, fn, inputs: list, dps: bool, device, *, no_grad: bo
             fn(*inputs, *outs)
         else:
             outs = normalize_outputs(problem, fn(*inputs), device)
-    if torch.cuda.is_available():
-        torch.cuda.synchronize(device)
+    fk_dev.synchronize(device)
     return outs
 
 
@@ -1019,7 +1060,8 @@ def _impl(problem: dict, which: str):
     card = Path(problem["_dir"]).parent.parent
     if which == "kernel":
         kpath = card / problem.get("kernel_file", "kernel.py")
-        load = load_cuda_entry if kpath.suffix in CUDA_KERNEL_SUFFIXES else load_entry
+        cuda = _is_cuda_kind() and kpath.suffix in CUDA_KERNEL_SUFFIXES
+        load = load_cuda_entry if cuda else load_entry
         return load(kpath, problem.get("entry", "run")), bool(problem.get("dps", True))
     ref = problem.get("reference_impl") or {"kind": "definition"}
     if which == "definition" or ref.get("kind") == "definition":
@@ -1043,8 +1085,7 @@ def warm_reference(problem: dict, ref_fn, ref_dps: bool, device) -> None:
     would otherwise have them counted against the solution when it is first timed."""
     inp = first_inputs(problem, device)
     call_impl(problem, ref_fn, inp, ref_dps, device, no_grad=True)
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    fk_dev.synchronize()
 
 
 def fib_correctness(problem: dict, impl, dps: bool, device, prec=None) -> tuple[dict, list]:
@@ -1109,8 +1150,7 @@ def sol_correctness(problem: dict, impl, dps: bool, device, prec=None) -> tuple[
     ref_run, custom = reference_callables(problem)
     random.seed(SOL_SEED)
     torch.manual_seed(SOL_SEED)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(SOL_SEED)
+    fk_dev.manual_seed_all(SOL_SEED)
     verdict = {"pass": False, "status": "PASSED", "max_abs": 0.0, "max_rel": 0.0,
                "matched_ratio": 1.0, "checks": [], "tolerance": tol, "seed": SOL_SEED,
                "threads_after_first_call": None}
@@ -1164,15 +1204,13 @@ def sol_correctness(problem: dict, impl, dps: bool, device, prec=None) -> tuple[
 # --- clocks --------------------------------------------------------------------------
 
 def _flush_buffer(device):
-    size = int(torch.cuda.get_device_properties(torch.device(device)).L2_cache_size) * 2
-    return torch.empty(max(size, 1 << 20), dtype=torch.int8, device=device)
+    # CUDA only: on an NPU the msprof timing backend flushes with its own Ascend
+    # kernel, so the bench must not allocate a torch.cuda L2 buffer there.
+    return fk_dev.l2_flush_buffer(device)
 
 
 def _reset_persisting_l2():
-    try:
-        torch.cuda.cudart().cudaCtxResetPersistingL2Cache()
-    except Exception:  # noqa: BLE001 — best effort, like the suites' own reset
-        pass
+    fk_dev.reset_persisting_l2()
 
 
 class _Shifted:
@@ -1585,7 +1623,7 @@ def measure(problem: dict, sets: list, kernel, kernel_dps: bool, ref=None,
     while time.perf_counter() - t0 < burn_in_s:
         for _ in range(20):
             kernel(*first, *kout)
-        torch.cuda.synchronize()
+        fk_dev.synchronize()
     k_sets, r_sets, ref_error = [], [], None
     for inp in sets:
         r1 = r2 = None
@@ -1874,7 +1912,7 @@ def _precision_measure(problem: dict, prec, case: str, outs: list, refs: list, r
 def _precision_stress(problem: dict, impl, dps: bool, device, prec) -> None:
     P = _precision()
     ref_run, custom = reference_callables(problem)
-    devices = [torch.cuda.current_device()] if torch.cuda.is_available() else []
+    devices = fk_dev.fork_rng_devices()
     for j, profile in enumerate(P.STRESS_PROFILES):
         with torch.random.fork_rng(devices=devices):
             torch.manual_seed(PRECISION_STRESS_SEED + j)
@@ -2256,7 +2294,10 @@ def task_error(out, ref, dtype: str) -> tuple[float, str | None]:
     if dtype in TASK_EXACT_DTYPES:
         bad = int((out != ref).sum().item())
         return (0.0, None) if bad == 0 else (math.inf, f"{bad} element(s) differ (exact dtype)")
-    x, y = out.to(torch.float64), ref.to(torch.float64)
+    # On an Ascend NPU a float32/bf16 .to(float64) silently stays float32; copy to
+    # the host and compute the real float64 distance there (outside any timed window).
+    x = out.detach().to("cpu").to(torch.float64)
+    y = ref.detach().to("cpu").to(torch.float64)
     yf, xf = torch.isfinite(y), torch.isfinite(x)
     if bool((yf & ~xf).any()):
         return math.inf, f"{int((yf & ~xf).sum())} non-finite value(s) where the judge is finite"
@@ -2351,7 +2392,7 @@ def _task_side(problem: dict, sets: list, kernel, kernel_dps: bool, ref=None,
             for name, inp in zip(groups, sets)]
     result = timing.measure_windows_workloads(work, burn_in_s=BURN_IN_S)
     block = timing.workloads_performance(result)
-    block["device_window_basis"] = BASIS_PLAIN
+    block["device_window_basis"] = timing.device_timer_basis()
     block["leaderboard"] = {
         "suite": SUITE_TASK, "upstream": UPSTREAM[SUITE_TASK], "timer": "timing.py",
         "protocol": {"aggregate": "geomean over input groups", "window": problem.get("timing")},
@@ -2438,7 +2479,7 @@ def _task_ref_alone(problem: dict, ref_fn, ref_dps: bool, device) -> int:
         blocks.append({"name": v["_wl_name"], "axes": v["workload"].get("axes"), **block})
     perf = _task_aggregate(problem, blocks)
     out = {"median_ms": perf["bwd_median_ms"], "device_median_ms": perf["device_median_ms"],
-           "device_window_basis": BASIS_PLAIN, "host_enqueue_ms": perf.get("host_enqueue_ms"),
+           "device_window_basis": fk_dev.device_timer_name(), "host_enqueue_ms": perf.get("host_enqueue_ms"),
            "leaderboard_timer": "timing.py", "clock": clock_state(),
            "aggregate": "geomean", "n_workloads": perf.get("n_workloads", len(blocks)),
            "workloads": [{"name": w.get("name"), "median_ms": w.get("bwd_median_ms"),
@@ -2539,8 +2580,16 @@ def run_leaderboard_bench(argv=None, problem_path=None) -> int:
         which = "representative workload" if scope["workloads"] == "representative" else "workload"
         print(f"[leaderboard] WORKLOAD SCOPE: {which} {scope['rep']} only "
               f"(1 of {scope['of']}; {WORKLOAD_SCOPE_ENV}) — a meta reading, never a gate")
-    device = "cuda"
+    kind = fk_dev.configure(problem_device_kind(problem))
+    device = "npu" if kind == "npu" else "cuda"
     suite = problem["suite"]
+    if kind == "npu" and suite != SUITE_TASK:
+        # The board suites' clocks (CUPTI / torch.profiler / events) are CUDA-only; only
+        # the forgekernel task suite is device-neutral. Refuse rather than call torch.cuda
+        # on an NPU.
+        print(f"[leaderboard] NPU device: suite {suite} timing is CUDA-only; refusing")
+        _emit({"error": f"NPU device is not supported for suite {suite}"})
+        return 2
     print(f"[leaderboard] suite={suite} ({UPSTREAM[suite]}) definition="
           f"{problem['definition']['name']} {describe_card_workloads(problem)}")
 
@@ -2719,6 +2768,9 @@ def ncu_window(problem_path=None, calls: int = 8, which: str = "kernel") -> None
     profiles its representative, or the workload ``FK_LB_WORKLOAD_SCOPE`` names (a meta
     tool reading the card one workload at a time)."""
     problem = load_problem(problem_path)
+    if fk_dev.configure(problem_device_kind(problem)) == "npu":
+        print("[leaderboard] ncu: NCU profiling is CUDA-only; not available on an Ascend NPU")
+        raise SystemExit(3)
     if scope := apply_workload_scope(problem):
         print(f"[leaderboard] ncu: workload {scope['rep']} (1 of {scope['of']}; "
               f"{WORKLOAD_SCOPE_ENV})", flush=True)

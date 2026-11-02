@@ -1308,7 +1308,7 @@ def write_card(op_dir: Path, problem: Problem, template_eval: Path, *,
         created.append(dst)
     for rel, text in problem.reference_files.items():
         put(f"{LEADERBOARD_DIR}/{rel}", text)
-    for name in ("leaderboard.py", "timing.py", "precision.py"):
+    for name in ("leaderboard.py", "timing.py", "precision.py", "fk_dev.py"):
         dst = op_dir / "eval" / name
         shutil.copy2(template_eval / name, dst)
         created.append(dst)

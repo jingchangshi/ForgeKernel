@@ -117,6 +117,46 @@ import warnings
 
 import torch
 
+
+def _fk_dev_module():
+    """The device layer copied beside this file (fk_dev.py): every device fact the
+    windows need, so no torch.cuda.* is named here directly."""
+    import sys as _sys
+    cur = _sys.modules.get("torch")
+    m = _sys.modules.get("fk_dev")
+    if m is not None and getattr(m, "_torch_obj", None) is cur:
+        return m
+    try:
+        import fk_dev as m
+    except Exception:  # noqa: BLE001 -- eval/ is not on sys.path in a bare test harness
+        m = None
+    if m is not None and getattr(m, "_torch_obj", None) is cur:
+        return m
+    # (Re)load against the current torch: a cached copy bound to a different torch
+    # module (a test harness swaps its stub between cases) must not be reused.
+    import importlib.util as _ilu
+    import pathlib as _pl
+    spec = _ilu.spec_from_file_location(
+        "fk_dev", _pl.Path(__file__).resolve().with_name("fk_dev.py"))
+    m = _ilu.module_from_spec(spec)
+    _sys.modules["fk_dev"] = m
+    spec.loader.exec_module(m)
+    return m
+
+
+fk_dev = _fk_dev_module()
+
+
+def set_device_kind(kind) -> str:
+    """Select the device family (cuda / npu); the bench sets it from problem.json."""
+    return fk_dev.configure(kind)
+
+
+def device_timer_basis() -> str:
+    """The timer the device window actually uses (cuda_events / msprof / npu_events)."""
+    return fk_dev.device_timer_name()
+
+
 WARMUP_ITERS = 20
 E2E_ITERS = 50        # per-call samples; median reported
 DEVICE_BATCH = 50     # back-to-back calls inside one amortized window
@@ -141,15 +181,15 @@ def time_e2e(fn, *, warmup: int = WARMUP_ITERS, iters: int = E2E_ITERS) -> list[
     """Per-call latency samples in ms (host tax included). Median is the reading."""
     for _ in range(warmup):
         fn()
-    torch.cuda.synchronize()
-    start = torch.cuda.Event(enable_timing=True)
-    stop = torch.cuda.Event(enable_timing=True)
+    fk_dev.synchronize()
+    start = fk_dev.Event(enable_timing=True)
+    stop = fk_dev.Event(enable_timing=True)
     samples = []
     for _ in range(iters):
         start.record()
         fn()
         stop.record()
-        torch.cuda.synchronize()
+        fk_dev.synchronize()
         samples.append(start.elapsed_time(stop))
     return samples
 
@@ -168,16 +208,25 @@ def time_device(fn, *, warmup: int = WARMUP_ITERS, batch: int = DEVICE_BATCH,
     """
     for _ in range(warmup):
         fn()
-    torch.cuda.synchronize()
-    start = torch.cuda.Event(enable_timing=True)
-    stop = torch.cuda.Event(enable_timing=True)
+    fk_dev.synchronize()
     samples = []
+    if fk_dev.msprof_available():
+        # Ascend NPU: the msprof kernel span is a host-free per-call device time
+        # (the backend flushes the cache with its own Ascend kernel before each
+        # repeat). This is the NPU device window; no CUDA events are touched.
+        for _ in range(reps):
+            samples.append(fk_dev.device_ms(fn, batch))
+        return samples
+    # CUDA (or an NPU without the optional msprof backend, which falls back to
+    # torch.npu.Event -- a host-inclusive window, marked host-bound in the report).
+    start = fk_dev.Event(enable_timing=True)
+    stop = fk_dev.Event(enable_timing=True)
     for _ in range(reps):
         start.record()
         for _ in range(batch):
             fn()
         stop.record()
-        torch.cuda.synchronize()
+        fk_dev.synchronize()
         samples.append(start.elapsed_time(stop) / batch)
     return samples
 
@@ -194,12 +243,12 @@ def time_host_enqueue(fn, *, warmup: int = WARMUP_ITERS,
     """
     for _ in range(warmup):
         fn()
-    torch.cuda.synchronize()
+    fk_dev.synchronize()
     t0 = time.perf_counter()
     for _ in range(iters):
         fn()
     elapsed_ms = (time.perf_counter() - t0) * 1e3 / max(1, iters)
-    torch.cuda.synchronize()   # drain what the loop queued; outside the clock
+    fk_dev.synchronize()   # drain what the loop queued; outside the clock
     return elapsed_ms
 
 
@@ -225,7 +274,7 @@ def run_prep(prep) -> dict:
     if not isinstance(saved, dict) or not all(isinstance(k, str) for k in saved):
         raise TypeError("prep() must return a dict {name: tensor}; the names are the "
                         "symmetrized inputs declared in window.toml")
-    torch.cuda.synchronize()
+    fk_dev.synchronize()
     return saved
 
 
@@ -297,7 +346,7 @@ class _Prep:
         return lambda: fn(self.saved)
 
     def block(self) -> dict:
-        torch.cuda.synchronize()
+        fk_dev.synchronize()
         return {"outputs": describe_saved(self.snapshot),
                 "mutated": mutated_saved(self.saved, self.snapshot),
                 **time_prep(self.prep)}
@@ -419,7 +468,7 @@ def burn_in(fn, *, seconds: float = BURN_IN_S,
     while time.perf_counter() - t0 < seconds:
         for _ in range(calls_per_round):
             fn()
-        torch.cuda.synchronize()
+        fk_dev.synchronize()
         rounds += 1
     return rounds
 
@@ -843,24 +892,25 @@ def time_device_graph(fn, *, warmup: int = WARMUP_ITERS, batch: int = DEVICE_BAT
     measuring python. Do not use it as the student's gate reading: a kernel that
     only performs inside a graph has a host problem the deployment still pays.
     """
-    if not hasattr(torch.cuda, "CUDAGraph") or not hasattr(torch.cuda, "graph"):
-        return graph_unavailable("this torch build exposes no CUDA graph capture API")
+    if not fk_dev.graph_available():
+        return graph_unavailable(fk_dev.graph_note()
+                                  or "this torch build exposes no CUDA graph capture API")
     try:
-        side = torch.cuda.Stream()
-        side.wait_stream(torch.cuda.current_stream())
-        with torch.cuda.stream(side):
+        side = fk_dev.Stream()
+        side.wait_stream(fk_dev.current_stream())
+        with fk_dev.stream(side):
             for _ in range(warmup):
                 fn()
-        torch.cuda.current_stream().wait_stream(side)
-        torch.cuda.synchronize()
+        fk_dev.current_stream().wait_stream(side)
+        fk_dev.synchronize()
     except Exception as exc:
         return graph_unavailable(f"pre-capture warmup raised {type(exc).__name__}: {exc}")
 
-    graph = torch.cuda.CUDAGraph()
+    graph = fk_dev.CUDAGraph()
     try:
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            with torch.cuda.graph(graph):
+            with fk_dev.graph(graph):
                 fn()
     except Exception as exc:
         return graph_unavailable(f"capture raised {type(exc).__name__}: {exc}")
@@ -869,16 +919,16 @@ def time_device_graph(fn, *, warmup: int = WARMUP_ITERS, batch: int = DEVICE_BAT
         return graph_unavailable(f"capture produced an EMPTY graph ({empty})")
 
     try:
-        torch.cuda.synchronize()
-        start = torch.cuda.Event(enable_timing=True)
-        stop = torch.cuda.Event(enable_timing=True)
+        fk_dev.synchronize()
+        start = fk_dev.Event(enable_timing=True)
+        stop = fk_dev.Event(enable_timing=True)
         samples = []
         for _ in range(reps):
             start.record()
             for _ in range(batch):
                 graph.replay()
             stop.record()
-            torch.cuda.synchronize()
+            fk_dev.synchronize()
             samples.append(start.elapsed_time(stop) / batch)
     except Exception as exc:
         return graph_unavailable(f"replay raised {type(exc).__name__}: {exc}")

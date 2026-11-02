@@ -38,7 +38,7 @@ KERNEL_FILE = {"cutedsl": "kernel.py", "cuda": "kernel.cu", "tilelang-ascend": "
 # nvcc/CuTe's arch spelling now lives with the rest of the device facts (forgekernel.device);
 # kept here under its old name because the card's gpu_entry.sh reads the env var, not this.
 CUTE_ARCH = device.CUDA_ARCH
-EVAL_FILES = ("leaderboard.py", "timing.py", "precision.py", "closed_ref.py", "ncu_probe.py")
+EVAL_FILES = ("leaderboard.py", "timing.py", "precision.py", "fk_dev.py", "closed_ref.py", "ncu_probe.py")
 NCU_PROBE_MODE = "cmd:ncu --csv --metrics gpu__time_active.sum python3 eval/ncu_probe.py"
 JOB_TIMEOUT_S = 1800
 FIRST_SEED = 1000
@@ -81,6 +81,10 @@ def card_problem(task, check, *, reference_impl: dict | None = None,
         "workload": workloads[0],
         "dps": False,
         "kernel_file": kernel_file(task),
+        # The device family this task's jobs run on (P5): the card's eval bench reads
+        # it to choose the CUDA or NPU timing/precision path. Derived from the task's
+        # arch through forgekernel.device so no eval/card code re-invents the rule.
+        "device": device.kind_of_arch(task.arch),
         "entry": "run",
         "reference_impl": reference_impl or {"kind": "definition",
                                              "name": "the judge (not timed)"},

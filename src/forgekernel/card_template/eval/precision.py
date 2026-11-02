@@ -74,6 +74,40 @@ import math
 import torch
 from torch.overrides import TorchFunctionMode
 
+
+def _fk_dev_module():
+    """The device layer copied beside this file (fk_dev.py)."""
+    import sys as _sys
+    cur = _sys.modules.get("torch")
+    m = _sys.modules.get("fk_dev")
+    if m is not None and getattr(m, "_torch_obj", None) is cur:
+        return m
+    try:
+        import fk_dev as m
+    except Exception:  # noqa: BLE001 -- eval/ is not on sys.path in a bare test harness
+        m = None
+    if m is not None and getattr(m, "_torch_obj", None) is cur:
+        return m
+    # (Re)load against the current torch: a cached copy bound to a different torch
+    # module (a test harness swaps its stub between cases) must not be reused.
+    import importlib.util as _ilu
+    import pathlib as _pl
+    spec = _ilu.spec_from_file_location(
+        "fk_dev", _pl.Path(__file__).resolve().with_name("fk_dev.py"))
+    m = _ilu.module_from_spec(spec)
+    _sys.modules["fk_dev"] = m
+    spec.loader.exec_module(m)
+    return m
+
+
+fk_dev = _fk_dev_module()
+
+
+def set_device_kind(kind) -> str:
+    """Select cuda / npu for the device layer (the bench sets it from problem.json)."""
+    return fk_dev.configure(kind)
+
+
 SCHEMA = 1
 METRIC = "rel_l2"
 # Calibrated on B200 (see the module docstring); the loop reads these from the block.
@@ -174,11 +208,9 @@ def upcast_call(fn, inputs, to: torch.dtype = torch.float64):
     """``fn(*inputs)`` with its float inputs and float casts lifted to ``to``; the RNG
     state is restored afterwards (a seeded protocol's next draw must not move)."""
     lifted = [_lift_input(x, to) for x in inputs]
-    devices = [torch.cuda.current_device()] if torch.cuda.is_available() else []
-    with torch.random.fork_rng(devices=devices), torch.no_grad(), _Upcast(to):
+    with torch.random.fork_rng(devices=fk_dev.fork_rng_devices()), torch.no_grad(), _Upcast(to):
         out = fn(*lifted)
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    fk_dev.synchronize()
     return out
 
 
@@ -209,11 +241,17 @@ def _as_list(out):
 
 def rel_l2(out: torch.Tensor, truth: torch.Tensor) -> float:
     """||out - truth|| / ||truth|| in float64 over the positions where the truth is
-    finite; inf when ``out`` is non-finite there, or differs where the truth is not."""
-    y = out.detach().to(torch.float64)
-    t = truth.detach().to(torch.float64)
-    if y.shape != t.shape:
+    finite; inf when ``out`` is non-finite there, or differs where the truth is not.
+
+    The distance is computed on the HOST in true float64: on an Ascend NPU a
+    float32/bf16 tensor's ``.double()`` silently stays float32 (not an error), so a
+    device-side float64 distance would only carry float32 precision. The device->host
+    copy is outside every timed window, so it never enters a device reading.
+    """
+    if tuple(out.shape) != tuple(truth.shape):
         return math.inf
+    y = out.detach().to("cpu").to(torch.float64)
+    t = truth.detach().to("cpu").to(torch.float64)
     fin = torch.isfinite(t)
     if not bool(fin.all()):
         if bool((y[~fin] != t[~fin]).any()):
@@ -379,9 +417,5 @@ def merge_blocks(named: list) -> dict | None:
 def no_tf32():
     """Run a block with tf32 off (the reference's own native run must not pick it up
     from a global flag the kernel set)."""
-    m, c = torch.backends.cuda.matmul.allow_tf32, torch.backends.cudnn.allow_tf32
-    torch.backends.cuda.matmul.allow_tf32 = torch.backends.cudnn.allow_tf32 = False
-    try:
+    with fk_dev.no_tf32():
         yield
-    finally:
-        torch.backends.cuda.matmul.allow_tf32, torch.backends.cudnn.allow_tf32 = m, c
