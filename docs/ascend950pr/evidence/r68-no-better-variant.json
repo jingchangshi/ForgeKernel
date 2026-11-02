@@ -1,0 +1,53 @@
+{
+  "round": "68",
+  "date": "2026-11-02",
+  "topic": "three more knobs tested under the fast-DMA regime; none beats v23",
+  "variants": [
+    {
+      "name": "v26 rows=2 stages=4 NORMAL_FV",
+      "candidate_ms": 0.079967,
+      "vendor_ms": 0.052316,
+      "point": 0.653234089,
+      "quiet": 15,
+      "verdict": "worse"
+    },
+    {
+      "name": "v27 rows=2 stages=6 NORMAL_FV",
+      "candidate_ms": 0.084178,
+      "vendor_ms": 0.057309,
+      "point": 0.679081705,
+      "quiet": 15,
+      "verdict": "worse"
+    },
+    {
+      "name": "v28 rows=4 stages=4 with eight accumulation chains per row",
+      "candidate_ms": 0.072535,
+      "vendor_ms": 0.053706,
+      "point": 0.739109605,
+      "quiet": 15,
+      "verdict": "worse"
+    }
+  ],
+  "best_remains": {
+    "candidate": "v23",
+    "decode": {
+      "point": 1.372594123,
+      "status": "EXCEED"
+    },
+    "prefill": {
+      "candidate_ms": 0.065149,
+      "status": "FAIL"
+    }
+  },
+  "findings": [
+    "fine tiles are still worse even now that the DMA policy is fixed (rows=2 costs 0.080-0.084 ms)",
+    "eight accumulation chains raise the candidate time to 0.0725 ms, so four chains is the right depth; the extra chains cost more than the shorter dependency chain saves",
+    "v23 (rows=4, stages=4, two output buffers, NORMAL_FV on all four DMA paths) survived every challenger this round"
+  ],
+  "hashes": {
+    "accept-v26-prefill-r68-raw.json": "cd92eacb279f910add5abad7461a6143541aa761a05486ddf16d5f04003ce9a5",
+    "accept-v27-prefill-r68-raw.json": "197b20f2991ab104fc863c9ab8e9731dc972873db2f565891c4ed590bbd0a43e",
+    "accept-v28-prefill-r68-raw.json": "9b7e66e08dd9325c02d2fb6ad0d89ec049aec4136651e871c1a4b0b0ff4bb90b"
+  },
+  "status": "decode met; prefill still about 20% short"
+}
