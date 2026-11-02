@@ -1,0 +1,54 @@
+{
+  "experiment": "E1/E2: pipeline depth and row batch against the vendor on Ascend950PR",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "card": "npu:1 (no running processes at start, but power 427W / 80C: the vendor absolute drifts)",
+  "method": "msprof per-kernel device time; the vendor is measured before and after the candidates in one window so the comparison stays within-window",
+  "vendor_ms": 0.078846,
+  "vendor_samples": [
+    0.080273,
+    0.077419
+  ],
+  "caveat": "the vendor absolute here (0.079 ms) differs from the clean 0.0514 ms measured earlier; on a shared machine only the within-window comparison is valid, never the ratio across runs",
+  "results": [
+    {
+      "name": "base_v2_s2_r4",
+      "rows": 4,
+      "versions": 2,
+      "stages": 2,
+      "threads": 256,
+      "device_ms": 0.163588,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "e1_v3_s3_r4",
+      "rows": 4,
+      "versions": 3,
+      "stages": 3,
+      "threads": 256,
+      "device_ms": 0.163883,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "e1_v3_s3_t512",
+      "rows": 4,
+      "versions": 3,
+      "stages": 3,
+      "threads": 512,
+      "device_ms": 0.160416,
+      "max_abs_err": 0.03125
+    },
+    {
+      "name": "e2_v2_s2_r6",
+      "rows": 6,
+      "versions": 2,
+      "stages": 2,
+      "threads": 256,
+      "device_ms": 0.164121,
+      "max_abs_err": 0.015625
+    }
+  ],
+  "conclusion": "device time is flat at 0.160-0.164 ms across rows 4->6, buffer versions 2->3, pipeline stages 2->3 and threads 256->512. Deeper prefetching and larger row batches do NOT reduce the candidate device time; the ~3x gap to the vendor is structural (data path / algorithm), not these knobs.",
+  "decision": "KEEP none. threads=512 is 2% faster but well inside noise and doubles max_abs_err to 0.03125; the rest are flat or worse. REVERT all. The next attempt must change the data path (a streaming reduce that never materialises a (rows,tile) fp32 fragment), not the tile/prefetch parameters, per the measured AIV-vector-bound / MTE2-starved attribution.",
+  "reproduce": "docs/ascend950pr/scripts/e1_pipeline.py"
+}
