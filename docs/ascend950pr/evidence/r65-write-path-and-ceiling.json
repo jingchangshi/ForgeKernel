@@ -1,0 +1,67 @@
+{
+  "round": "65",
+  "date": "2026-11-02",
+  "topic": "the copy path is capped by aggregate DMA throughput, and the cap is reached",
+  "write_path_sweep": {
+    "note": "write-only microbenchmark, 64MB out",
+    "results": [
+      {
+        "dtype": "float32",
+        "chunk_KB": 64,
+        "stages": 2,
+        "TBps": 1.114
+      },
+      {
+        "dtype": "float32",
+        "chunk_KB": 64,
+        "stages": 4,
+        "TBps": 1.118
+      },
+      {
+        "dtype": "float32",
+        "chunk_KB": 128,
+        "stages": 2,
+        "TBps": 1.109
+      },
+      {
+        "dtype": "float32",
+        "chunk_KB": 128,
+        "stages": 4,
+        "TBps": 1.107
+      }
+    ],
+    "earlier_bf16": [
+      {
+        "chunk_KB": 8,
+        "TBps": 1.121
+      },
+      {
+        "chunk_KB": 32,
+        "TBps": 1.121
+      },
+      {
+        "chunk_KB": 128,
+        "TBps": 1.131
+      }
+    ],
+    "reading": "write throughput sits at 1.11-1.13 TB/s and does not respond to element width, chunk size, buffer depth or alignment. It is a property of the path, not of a setting."
+  },
+  "aggregate_ceiling": {
+    "copy_128MB_ms": 0.0778,
+    "aggregate_TBps": 1.65,
+    "breakdown": "read alone reaches 2.13 TB/s and write alone 1.13 TB/s, but together they only reach 1.65 TB/s, so the two directions contend for the same movement resource"
+  },
+  "comparison": {
+    "our_kernel_ms": 0.074509,
+    "our_copy_floor_ms": 0.0778,
+    "vendor_ms": 0.0527,
+    "aggregate_needed_for_vendor_TBps": 2.43
+  },
+  "conclusion": [
+    "a pure copy of the same 128MB cannot be done faster than about 0.078 ms from TileLang on this host, and our full kernel already runs at 0.0745 ms",
+    "the vendor reaches an aggregate 2.43 TB/s, about 47% above the copy-path ceiling we measured",
+    "since the byte count is fixed (64MB in, 64MB out, bf16 both ways), the residual gap cannot be closed by arithmetic scheduling, buffer tuning or partitioning within this copy path",
+    "this is a measured property of the TileLang copy path on this host, not a claim about the hardware; the vendor evidently uses a movement path we cannot reach from TileLang"
+  ],
+  "status": "prefill not met; decode EXCEED 1.3160 stands"
+}
