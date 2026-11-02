@@ -1,0 +1,10 @@
+Loading tilelang libs from dev root: /home/s00653124/workspace/tilelang/build
+2026-11-02 20:26:04  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:137): TileLang begins to compile kernel `main` with `out_idx=[2]`
+2026-11-02 20:26:06  [TileLang:tilelang.jit.kernel:INFO] (kernel.py:145): TileLang completes to compile kernel `main`
+{"round": 0, "readings": [{"name": "simd", "ms": 0.11975383333333332}, {"name": "simt", "ms": 0.14209616666666666}, {"name": "simt", "ms": 0.14003333333333334}, {"name": "simd", "ms": 0.11792}], "simt_over_simd": 1.187044850681221}
+{"round": 1, "readings": [{"name": "simt", "ms": 0.14281616666666666}, {"name": "simd", "ms": 0.11845183333333333}, {"name": "simd", "ms": 0.117807}, {"name": "simt", "ms": 0.142302}], "simt_over_simd": 1.2068042605814386}
+{"round": 2, "readings": [{"name": "simd", "ms": 0.11769816666666667}, {"name": "simt", "ms": 0.14260833333333334}, {"name": "simt", "ms": 0.142189}, {"name": "simd", "ms": 0.11800383333333332}], "simt_over_simd": 1.2082940888636216}
+{"round": 3, "readings": [{"name": "simt", "ms": 0.144615}, {"name": "simd", "ms": 0.11886933333333333}, {"name": "simd", "ms": 0.11802533333333333}, {"name": "simt", "ms": 0.14166366666666666}], "simt_over_simd": 1.2084639586651735}
+{"round": 4, "readings": [{"name": "simd", "ms": 0.11825666666666668}, {"name": "simt", "ms": 0.1418815}, {"name": "simt", "ms": 0.14035716666666664}, {"name": "simd", "ms": 0.11800116666666667}], "simt_over_simd": 1.1946214129055333}
+{"round": 5, "readings": [{"name": "simt", "ms": 0.14623916666666667}, {"name": "simd", "ms": 0.1170065}, {"name": "simd", "ms": 0.11665133333333333}, {"name": "simt", "ms": 0.140661}], "simt_over_simd": 1.227864534108636}
+{"sha256": {"simd": "8b9686831001fb6051fe9860651d3c021b6c500bbd0ef1365653ea045def002c", "simt": "470a6bd8bf1d5256b5cb7bdd1ffcbfa26bf2d404d65d32a0e7209f763838a9af"}, "median_ratio": 1.20754917472253, "limitations": "One process; no contention witness, speed screening only; not acceptance"}
