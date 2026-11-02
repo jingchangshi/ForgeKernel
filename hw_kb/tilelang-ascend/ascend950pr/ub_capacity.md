@@ -1,4 +1,4 @@
-# ub_capacity (Unified Buffer (UB) per-core capacity ceiling: 256 KiB, and how to measure it)
+# ub_capacity (observed Unified Buffer launch limits for one probe)
 
 > **Certification source: measured on Ascend950PR by this repo's device probe.** This is a resource-ceiling
 > measurement, not a `max_diff` numerical contract: a single-shared-buffer kernel is compiled AND run at
@@ -64,20 +64,15 @@ Measured ladder (the actual reading):
 | 270336 | 264 | REJECTED |
 | 271360 | 265 | REJECTED |
 
-**Conclusion: the per-kernel shared-memory ceiling is exactly 256 KiB = 262144 B** (256 KiB passes, 257 KiB
-fails).
+**Observation:** this single-buffer probe launched with 262144 B and was rejected at 263168 B. These tested points do not establish an exact limit or a general physical or per-kernel capacity.
 
 ## Gotchas
 
 1. **Compilation alone does not enforce the limit — you must run.** The runtime launch check
    (`aclrtLaunchKernelWithHostArgs`) is what validates dynamic + static shared memory; a build that merely
    compiles can sit above the ceiling and tell you nothing.
-2. **Static shared memory draws on the same budget.** A real kernel's dynamic budget is smaller than the
-   bare 262144 B ceiling once compiler-managed static shared memory is subtracted. 248 KiB = 253952 B is a
-   plausible conservative *effective* figure; treat 256 KiB as the hard ceiling and design tiles against a
-   budget you have subtracted from it, not against the ceiling itself.
-3. **The ceiling is per core, not per process.** It is the per-kernel shared-memory budget of one AI core;
-   do not multiply it by the core count when sizing one core's tile.
+2. **Test the actual kernel.** Static allocations, buffering and compiler reservations can affect whether a launch fits. The relationship between the reported 248 KiB and this probe is not established; do not infer an 8 KiB reservation.
+3. The observed interval applies to this probe; validate any per-core allocation on the target path.
 4. **Do not carry an "about 216 KiB" figure.** That number was an unsupported guess, was never printed by
    any error, and is retracted. The only error text seen was `dyn_ubuf <n> bytes > budget`, with no
    budget stated. Measure, do not infer the budget from the absence of a number.

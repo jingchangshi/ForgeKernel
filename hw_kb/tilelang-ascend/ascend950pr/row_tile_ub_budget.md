@@ -92,8 +92,7 @@ more arithmetic tuning.
    too.
 3. **Divisibility.** `batch % (N_CORES * rows)` must be 0 (and the per-row width a power-of-two tile for
    the vector pass); guard the sweep and skip a rows value that does not divide, rather than mis-tiling.
-4. **248 KiB is the conservative practical figure.** The hardware ceiling is 256 KiB; design against
-   ~248 KiB (253952 B) once compiler-managed static shared memory is subtracted.
+4. **Validate the actual allocation.** The single-buffer probe does not establish a general ceiling or explain the reported 248 KiB figure; account for buffering and test the compiled kernel.
 5. **A deeper pipeline is not free.** Each extra stage is another copy of the row batch in UB; on this
    ceiling the extra version can be exactly what pushes rows=8 over.
 
@@ -103,5 +102,5 @@ more arithmetic tuning.
   `tilelang.compile(target="ascend")`, `tilelang.profiler.msprof.bench_with_msprof`.
 - Device-measured on this repo's Ascend950PR probe: `docs/ascend950pr/scripts/sweep_rows.py` (rows sweep),
   evidence JSONs under `docs/ascend950pr/evidence/`.
-- The per-core ceiling used here: [`ub_capacity`](ub_capacity.md) (256 KiB = 262144 B).
+- Single-buffer launch observations: [`ub_capacity`](ub_capacity.md).
 - Detailed provenance: docs/kb-provenance/tilelang-ascend/row_tile_ub_budget.md (for human review, not in the agent read set).
