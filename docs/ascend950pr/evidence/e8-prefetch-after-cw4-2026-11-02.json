@@ -1,0 +1,52 @@
+{
+  "experiment": "E8: re-test prefetch depth after cw4 made compute faster",
+  "date": "2026-11-02",
+  "shape": "8192x4096 bf16",
+  "card": "npu:0",
+  "vendor_ms": 0.077729,
+  "rationale": "cw4 sped up the compute loops, so the pipeline balance might have shifted from compute-bound to DMA-bound, making deeper prefetch useful where E1 (at cw1) found it flat",
+  "results": [
+    {
+      "name": "r4_v2",
+      "rows": 4,
+      "versions": 2,
+      "stages": 2,
+      "device_ms": 0.145589,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "r4_v3",
+      "rows": 4,
+      "versions": 3,
+      "stages": 3,
+      "device_ms": 0.145412,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "r4_v4",
+      "rows": 4,
+      "versions": 4,
+      "stages": 4,
+      "device_ms": 0.146009,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "r8_v2",
+      "rows": 8,
+      "versions": 2,
+      "stages": 2,
+      "device_ms": 0.15761,
+      "max_abs_err": 0.015625
+    },
+    {
+      "name": "r2_v4",
+      "rows": 2,
+      "versions": 4,
+      "stages": 4,
+      "device_ms": 0.16099,
+      "max_abs_err": 0.015625
+    }
+  ],
+  "conclusion": "even after cw4, deeper prefetch (versions/stages 3, 4) is flat (~0.145 ms) and rows=8/2 are worse. The rebalance hypothesis is wrong: prefetch depth is not the lever at any point.",
+  "decision": "KEEP rows=4 versions=2 cw=4. Confirms the earlier finding independently under the faster compute."
+}
