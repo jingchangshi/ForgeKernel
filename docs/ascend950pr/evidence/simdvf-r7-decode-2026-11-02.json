@@ -1,0 +1,35 @@
+{
+  "round": "7",
+  "date": "2026-11-02",
+  "topic": "decode shape now faster than vendor; prefill still short; cube path blocked",
+  "card": "shared NPU 1",
+  "blocked_paths": {
+    "cube_gemm": "T.gemm device codegen fails on this CANN: undefined asc_set_gm2l1_nz_para / asc_set_l0c_copy_nz_para / asc_unit_flag_mode / asc_quant_mode / asc_relu_pre_mode. The official example_gemm.py fails identically, so this is a toolchain incompatibility, not our usage.",
+    "bf16_fma": "vmula with bf16 operands and an f32 accumulator is rejected; there is no mixed-precision multiply-accumulate.",
+    "vld_conversion": "vld never converts; vcvt is mandatory, so the two-pass design cannot drop a conversion."
+  },
+  "results": {
+    "decode_64x4096": {
+      "correct": true,
+      "rel_error": 0.000631,
+      "kernel_ms": 0.002773,
+      "vendor_ms": 0.003577,
+      "ratio": 1.29,
+      "samples": [
+        1.321,
+        1.299,
+        1.306,
+        1.312,
+        1.29
+      ],
+      "note": "kernel is ~29% faster than vendor in this window"
+    },
+    "prefill_8192x4096": {
+      "kernel_ms": 0.11613,
+      "best_ratio": 0.622
+    }
+  },
+  "ceiling_reasoning": "the kernel is vector-bound; vector busy was ~89.6 us at 122.6 us total, so this two-pass vector algorithm has a structural ceiling near 0.8x for prefill even with perfect overlap. Removing cube and bf16-fma as options leaves no known way to cut the per-element vector op count by the ~25% needed.",
+  "status": "decode above 1.0 in a single-process paired measurement; prefill still ~0.62x; neither is witness-audited and no acceptance has run",
+  "not_proven": "no witness audit, no multi-process confirmation, no independent acceptance; prefill parity not achieved"
+}
