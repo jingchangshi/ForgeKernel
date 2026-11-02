@@ -11,6 +11,10 @@ arch     = "ascend950pr"
 run    = "reference/run.py:run"
 source = "reference"
 
+[agent]
+# The machine supplies the gateway URL and credentials via its local environment.
+model = "auto/claude-sonnet-5-5"
+
 [budget]
 hours    = 2
 max_meta = 1
