@@ -6,9 +6,11 @@ machine's ``local.env``:
 
 * ``[repo] delivery`` -- ``local`` (this machine) or ``ssh`` (one ssh host);
   ``branch`` -- the tree's branch a job runs; ``entry_script`` -- gpu_entry.sh;
-* ``[exec]`` -- ``gpu`` (the CUDA device index), and for ssh ``host`` (an ssh alias that
-  logs in without a prompt), ``workdir`` (an absolute directory on the host) and an
-  optional ``env_file`` the job sources first;
+* ``[exec]`` -- ``gpu`` (the device index), ``kind`` (``cuda`` or ``npu``,
+  forgekernel.device: the family decides which VISIBLE variable and which lock the job
+  uses; written from the task's arch), and for ssh ``host`` (an ssh alias that logs in
+  without a prompt), ``workdir`` (an absolute directory on the host) and an optional
+  ``env_file`` the job sources first;
 * ``[job] timeout`` -- seconds one gpu_entry task may take;
 * ``[env]`` -- environment for the job (secrets in ``submit.local.toml``).
 """
@@ -47,6 +49,10 @@ class SubmitConfig:
     exec_workdir: str = ""
     exec_env_file: str = ""
     exec_gpu: str = "0"
+    # The device family (forgekernel.device): "cuda" (CUDA_VISIBLE_DEVICES, gpu locks) or
+    # "npu" (ASCEND_RT_VISIBLE_DEVICES, npu locks). Cards written before this key existed
+    # are CUDA ones, which is what the default keeps them.
+    exec_kind: str = "cuda"
 
     @property
     def cluster(self) -> str:
@@ -104,7 +110,17 @@ def load_config(op: str, base_dir: str | Path | None = None) -> SubmitConfig:
         exec_workdir=workdir,
         exec_env_file=str(ex.get("env_file", "")),
         exec_gpu=str(ex.get("gpu", "0")),
+        exec_kind=_kind(str(ex.get("kind", "cuda"))),
     )
+
+
+def _kind(raw: str) -> str:
+    """A validated ``[exec] kind``; a typo is refused rather than silently read as CUDA."""
+    from forgekernel import device
+    kind = raw.strip().lower() or device.DEFAULT_KIND
+    if kind not in device.KINDS:
+        raise ValueError(f"invalid [exec] kind {raw!r}; expected one of {list(device.KINDS)}")
+    return kind
 
 
 def _merge(base: dict, override: dict) -> None:

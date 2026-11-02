@@ -1,7 +1,7 @@
 # Where this operator tree's GPU jobs run (non-secret). `forge run` writes this file from
 # the machine's local.env on every launch; a hand-made tree fills it in itself.
 #
-#   delivery = "local" -- on this machine, under a per-GPU lock
+#   delivery = "local" -- on this machine, under a per-device lock
 #   delivery = "ssh"   -- on one ssh host: the tree is copied to [exec] workdir and
 #                         gpu_entry runs there (the host needs the same toolchain)
 
@@ -14,7 +14,9 @@ branch = "TODO"                 # the operator's working branch
 entry_script = "gpu_entry.sh"
 
 [exec]
-gpu = "0"                       # CUDA device index
+gpu = "0"                       # device index: a CUDA card, or an Ascend device id
+kind = "cuda"                   # cuda | npu -- which family "gpu" names. The task arch
+                                # decides; `forge run` writes it on every launch.
 # host = "my-gpu-box"           # ssh delivery: an ssh alias that logs in without a prompt
 # workdir = "/tmp/forgekernel"  # ssh delivery: an absolute directory on the host
 # env_file = "/opt/env.sh"      # optional: sourced before every job on the host

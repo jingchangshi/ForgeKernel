@@ -25,13 +25,19 @@ hook = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(hook)
 
 
-def _policy(tmp_path, mode="blackbox", urls=("github.com/org/RefLib",)):
+def _policy(tmp_path, mode="blackbox", urls=("github.com/org/RefLib",), sandbox=None):
     ref = tmp_path / "refs" / "RefLib"
     tree = tmp_path / "run" / "operators" / "_ref"
     ref.mkdir(parents=True)
     tree.mkdir(parents=True)
-    cfg = {"loop": {"ref_source_paths": [str(ref)], "ref_source_urls": list(urls)}}
-    pol = ap.from_config(cfg, oracle_mode=mode, repo_root=tmp_path / "run", teacher_trees=[tree])
+    lc = {"ref_source_paths": [str(ref)], "ref_source_urls": list(urls)}
+    if sandbox is not None:
+        lc["agent_sandbox"] = sandbox
+    cfg = {"loop": lc}
+    # environ={}: the machine layer is a real input, so a developer whose shell exports
+    # FK_AGENT_SANDBOX must not change what these tests render.
+    pol = ap.from_config(cfg, oracle_mode=mode, repo_root=tmp_path / "run",
+                         teacher_trees=[tree], environ={})
     return pol, ref.resolve(), tree.resolve()
 
 
@@ -52,9 +58,6 @@ def test_the_student_is_offline_and_cannot_read_the_reference_or_teacher_trees(t
     # what refuses the connection (strictAllowlist is read from user / managed / CLI
     # settings only, never from the project file this is delivered in).
     assert net["deniedDomains"] == ["*"] and net["strictAllowlist"] is True
-    assert s["sandbox"]["enabled"] is True and s["sandbox"]["allowUnsandboxedCommands"] is False
-    # Without this a sandbox that cannot start warns and runs the command unsandboxed.
-    assert s["sandbox"]["failIfUnavailable"] is True
     assert {str(ref), str(tree)} <= set(s["sandbox"]["filesystem"]["denyRead"])
     assert f"Read(/{ref})" in deny and f"Read(/{ref}/**)" in deny
     assert all(r.startswith(("Read(//", "Edit(//", "Bash(", "Web")) for r in deny), \
@@ -62,6 +65,34 @@ def test_the_student_is_offline_and_cannot_read_the_reference_or_teacher_trees(t
     assert str(ws / ".claude") in s["sandbox"]["filesystem"]["denyWrite"]
     assert str(ap.HOOK_SCRIPT) in s["sandbox"]["filesystem"]["denyWrite"]
     # The hook is the student's tripwire too, not only the blackbox teacher's.
+    assert s["hooks"]["PreToolUse"][0]["hooks"][0]["command"].count("agent_policy_hook.py")
+
+
+@pytest.mark.parametrize("mode,enabled,fails,unsandboxed", [
+    # strict is what every run got before the modes existed: on, must start, no bypass.
+    ("strict", True, True, False),
+    # auto: on, but a sandbox that cannot start falls back instead of stopping the turn.
+    ("auto", True, False, True),
+    # off: not started at all. The deny rules, the hook and the filesystem lists stay.
+    ("off", False, None, None),
+])
+def test_the_sandbox_mode_decides_the_sandbox_block(tmp_path, mode, enabled, fails,
+                                                 unsandboxed):
+    pol, ref, tree = _policy(tmp_path, sandbox=mode)
+    s = pol.settings("student", tmp_path / "run" / "operators" / "op-ws")
+    block = s["sandbox"]
+    assert block["enabled"] is enabled
+    if fails is None:
+        # flags about a sandbox that is deliberately not expected would read as "on"
+        assert "failIfUnavailable" not in block
+        assert "allowUnsandboxedCommands" not in block
+    else:
+        assert block["failIfUnavailable"] is fails
+        assert block["allowUnsandboxedCommands"] is unsandboxed
+    # mode-independent: the boundary the file tools are checked against, and the hook.
+    assert {str(ref), str(tree)} <= set(block["filesystem"]["denyRead"])
+    assert "denyWrite" in block["filesystem"] and "allowWrite" in block["filesystem"]
+    assert "WebFetch" in s["permissions"]["deny"]
     assert s["hooks"]["PreToolUse"][0]["hooks"][0]["command"].count("agent_policy_hook.py")
 
 

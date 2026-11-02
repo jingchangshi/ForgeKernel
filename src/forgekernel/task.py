@@ -79,9 +79,25 @@ GLOBAL_FILES = ("models.toml", "loop.toml")
 DESCRIPTION_FILE = "description.md"
 SHAPES_FILE = "shapes.json"
 
-LANGUAGES = ("cutedsl", "cuda")
+LANGUAGES = ("cutedsl", "cuda", "tilelang-ascend")
 # The loop's own language name for each task language (forgekernel.loop.lang_mode).
-LOOP_LANGUAGE = {"cutedsl": "cutedsl", "cuda": "cuda-sol"}
+LOOP_LANGUAGE = {"cutedsl": "cutedsl", "cuda": "cuda-sol",
+                 "tilelang-ascend": "tilelang-ascend"}
+# The architectures a task's arch may name, per language. A CUDA arch is an SM number
+# ("sm100", "sm90a"); an Ascend NPU is a SoC product name ("ascend950pr"). The list is
+# the shape a name may take, not the set of trees: whether the tree exists is checked
+# against the KB root (tests/test_kb_arch.py, _kb_dir).
+ARCH_RE = {
+    # The CUDA/NVIDIA spelling every card written before this table existed uses.
+    "default": re.compile(r"^sm\d+[a-z]?$"),
+    "cutedsl": re.compile(r"^sm\d+[a-z]?$"),
+    "cuda": re.compile(r"^sm\d+[a-z]?$"),
+    "tilelang-ascend": re.compile(r"^ascend\d+[a-z]*$"),
+}
+ARCH_EXAMPLES = {
+    "default": '"sm90" or "sm100"',
+    "tilelang-ascend": '"ascend950pr"',
+}
 TIMINGS = ("device", "e2e")
 BACKENDS = ("claude",)
 ROLES = ("teacher", "student")
@@ -252,9 +268,12 @@ def load_task(task_dir: str | Path, *, kb_root: Path | None = None,
     if language not in LANGUAGES:
         problems.append(f"[task] language must be one of {list(LANGUAGES)}, got {language!r}")
     arch = t.get("arch")
-    if not isinstance(arch, str) or not re.match(r"^sm\d+[a-z]?$", arch or ""):
-        problems.append(f"[task] arch must name a GPU architecture such as \"sm90\" or "
-                        f"\"sm100\", got {arch!r}")
+    arch_re = ARCH_RE.get(language, ARCH_RE["default"])
+    if not isinstance(arch, str) or not arch_re.match(arch or ""):
+        examples = ARCH_EXAMPLES.get(language, ARCH_EXAMPLES["default"])
+        problems.append(f"[task] arch must name an architecture such as {examples}"
+                        + (f" for language {language!r}" if language in LANGUAGES else "")
+                        + f", got {arch!r}")
     elif language in LANGUAGES:
         kb = _kb_dir(kb_root, language, arch)
         if not kb.is_dir():

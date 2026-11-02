@@ -37,6 +37,21 @@ agent's working directory right before each turn (``<cwd>/.claude/settings.json`
   ``strictAllowlist`` is NOT -- it is read from user, managed and ``--settings``
   settings only), and ``failIfUnavailable`` so that a sandbox that cannot start stops
   the agent instead of silently running it unsandboxed;
+
+**The sandbox has a mode** (``[loop] agent_sandbox`` / ``FK_AGENT_SANDBOX``): ``strict``
+(the default, everything above), ``auto`` (on, but a command runs unsandboxed with a
+warning when it cannot start), and ``off`` -- deliberately not started. ``off`` is what a
+machine without unprivileged user namespaces needs (``bwrap`` cannot run under
+``apparmor_restrict_unprivileged_userns=1``); under it the deny rules, the hook and the
+harness filesystem checks still hold, but they are **policy checks, not OS isolation**, and
+the notice and every refusal message says exactly that instead of promising a barrier that
+is not there.
+
+**The network and the GPU machine are two policies, not one** (``agent_network`` /
+``agent_cluster``). They used to be welded together -- a student with the network on
+silently still had ``no_cluster`` forced -- so a run that needed the web for one session
+could not say so. ``online`` / ``offline`` and ``allow`` / ``deny`` are now independent
+overrides of the role defaults (student offline, student does not drive the GPU).
 - a PreToolUse **hook** is the last layer: it refuses a student's network-shaped shell
   commands, and refuses teacher tool calls that name a declared reference repository.
   It is a tripwire, not a boundary -- a fetch that never spells the repository out
@@ -86,7 +101,49 @@ KEY_DSL_SOURCE_DIRS = "dsl_source_dirs"
 # an offline CUDA student may read. Falls back to dsl_source_dirs, where older
 # configs declared them.
 KEY_CUDA_SOURCE_DIRS = "cuda_source_dirs"
+# The TileLang mode's counterpart (loop/dsl_source.py): the TileLang package directory an
+# offline TileLang student may read. Falls back to dsl_source_dirs, where a card that
+# predates the key would have declared it.
+KEY_TILELANG_SOURCE_DIRS = "tilelang_source_dirs"
 KEY_EXTRA_ALLOW_WRITE = "agent_allow_write"
+# Three independent policy knobs, each configurable in loop.toml [loop] and, when the
+# config layer says nothing, from the machine environment (local.env / FK_AGENT_*), so a
+# machine can be pinned without editing every card. They are separate on purpose:
+# "may this turn reach the network" and "may it drive the GPU machine" used to be one
+# decision (a student with the network on still had no_cluster forced), and the OS
+# sandbox used to be unconditional.
+KEY_AGENT_SANDBOX = "agent_sandbox"
+KEY_AGENT_NETWORK = "agent_network"
+KEY_AGENT_CLUSTER = "agent_cluster"
+# What the agent policy keys a loop.toml may carry (task._KEYS["loop"], so a typo is a
+# launch error rather than a silently ignored setting).
+POLICY_KEYS = (KEY_AGENT_SANDBOX, KEY_AGENT_NETWORK, KEY_AGENT_CLUSTER)
+
+# The OS sandbox (Claude Code's Bash sandbox: Seatbelt on macOS, bwrap/landlock on
+# Linux). strict = on and must start (today's behaviour); auto = on when it starts,
+# the command runs unsandboxed with a warning when it cannot; off = deliberately not
+# started, which this machine needs (bwrap cannot start under
+# apparmor_restrict_unprivileged_userns=1). With off, the deny rules, the PreToolUse
+# hook and the harness's own filesystem checks still hold — they are policy checks,
+# NOT OS isolation, and every notice and refusal says so in those words.
+SANDBOX_STRICT = "strict"
+SANDBOX_AUTO = "auto"
+SANDBOX_OFF = "off"
+SANDBOX_MODES = (SANDBOX_STRICT, SANDBOX_AUTO, SANDBOX_OFF)
+DEFAULT_SANDBOX = SANDBOX_STRICT
+
+# Network / cluster policy: "" = the role's default (student offline, student cannot
+# drive the GPU machine), or an explicit override for every role in the run.
+NETWORK_ONLINE = "online"
+NETWORK_OFFLINE = "offline"
+NETWORK_MODES = (NETWORK_ONLINE, NETWORK_OFFLINE)
+CLUSTER_ALLOW = "allow"
+CLUSTER_DENY = "deny"
+CLUSTER_MODES = (CLUSTER_ALLOW, CLUSTER_DENY)
+
+ENV_AGENT_SANDBOX = "FK_AGENT_SANDBOX"
+ENV_AGENT_NETWORK = "FK_AGENT_NETWORK"
+ENV_AGENT_CLUSTER = "FK_AGENT_CLUSTER"
 # A source run whose ref_source_paths / ref_source_urls name OTHER implementations (earlier
 # runs on the operator, sister libraries) rather than the oracle itself: true denies them
 # to the teacher as well, the way a blackbox teacher is denied them. The oracle stays
@@ -153,6 +210,14 @@ class AgentPolicy:
     # (loop/goal_ref.py), which writes a reference from scratch and may look things up.
     # The GPU-machine CLIs stay off — its GPU channel is the loop's ledgered eval command.
     student_online: bool = False
+    # The OS sandbox mode (SANDBOX_MODES) and the two independent policy overrides
+    # (NETWORK_MODES / CLUSTER_MODES, "" = the role default). Resolved from loop.toml and
+    # the machine environment by resolve_modes() and passed in by from_config(), so the
+    # EARLIEST policy build (launch.write_judge, before loop.toml exists) obeys the same
+    # settings as the main loop.
+    sandbox_mode: str = DEFAULT_SANDBOX
+    network_mode: str = ""
+    cluster_mode: str = ""
     # Paths the agent may read but not write, by the file tools or the shell: the
     # ref_from_goal session's ledger, state and candidates (goal_ref.session_read_only_paths)
     # — the records its deliverable check and its acceptance trust.
@@ -188,11 +253,25 @@ class AgentPolicy:
         return []
 
     def offline(self, role: str) -> bool:
+        """Whether this role has no network. An explicit policy decides; with no explicit
+        policy the student is offline unless its own session turned it on (ref_from_goal)."""
+        if self.network_mode == NETWORK_ONLINE:
+            return False
+        if self.network_mode == NETWORK_OFFLINE:
+            return True
         return role == ROLE_STUDENT and not self.student_online
 
     def no_cluster(self, role: str) -> bool:
-        """The student never drives the GPU machine itself, online or not (offline, the
-        network denial already covers it)."""
+        """Whether this role may not drive the GPU machine itself.
+
+        Independent of the network on purpose -- that is the whole point of the split: a
+        student with the network on (the ref_from_goal session) still does not submit jobs,
+        and a run can allow the cluster without opening the web. With no explicit policy
+        the student never drives it (offline, the network denial already covers it)."""
+        if self.cluster_mode == CLUSTER_ALLOW:
+            return False
+        if self.cluster_mode == CLUSTER_DENY:
+            return True
         return role == ROLE_STUDENT
 
     def allow_write(self, role: str) -> list[Path]:
@@ -236,6 +315,51 @@ class AgentPolicy:
         ws = Path(workspace).resolve()
         return [p for p in self.deny_write if not (p == ws or p in ws.parents)]
 
+    def sandbox(self, role: str, workspace: Path, denied: list[Path],
+                read_only: list[Path]) -> dict:
+        """The ``sandbox`` block for this role under the configured mode.
+
+        ``strict`` is what every run got before the mode existed: the sandbox is on, must
+        start, and a command may not run unsandboxed. ``auto`` keeps it on but lets Claude
+        Code fall back to an unsandboxed command when the sandbox cannot start (a warning,
+        not a stop) -- the mode for a machine where bwrap sometimes works. ``off``
+        deliberately does not start it at all: this machine cannot (bwrap needs
+        unprivileged user namespaces, which apparmor_restrict_unprivileged_userns=1 refuses),
+        and a strict sandbox there stops every Bash call instead of protecting anything.
+
+        With ``off`` the filesystem lists are still rendered. They are the truth about what
+        the policy SAYS (deny rules are the boundary the file tools are checked against, and
+        the hook reads the same document), and the notice tells the agent plainly that they
+        are policy checks, not OS isolation. Dropping them would make the two modes differ in
+        more than the one thing the mode is about.
+        """
+        filesystem = {
+            "denyRead": [str(p) for p in denied],
+            "allowWrite": [str(p) for p in self.allow_write(role)],
+            "denyWrite": [str(workspace / ".claude"), str(HOOK_SCRIPT),
+                          *(str(p) for p in denied), *(str(p) for p in read_only)],
+        }
+        if self.sandbox_mode == SANDBOX_OFF:
+            # enabled=false is how Claude Code is told not to sandbox; failIfUnavailable
+            # and allowUnsandboxedCommands would be read as "the sandbox is expected", so
+            # they are left out rather than set to values that say nothing.
+            return {"enabled": False, "filesystem": filesystem}
+        # strict: the sandbox must start (failIfUnavailable) and a command may not run
+        # unsandboxed -- anything less is no enforcement at all. auto: the sandbox is on
+        # but its absence degrades to a warning instead of stopping the turn, which is
+        # only coherent when an unsandboxed command is allowed.
+        strict = self.sandbox_mode == SANDBOX_STRICT
+        sandbox: dict = {
+            "enabled": True,
+            "failIfUnavailable": strict,
+            "allowUnsandboxedCommands": not strict,
+            "filesystem": filesystem,
+        }
+        if self.offline(role):
+            sandbox["network"] = {"allowedDomains": [], "deniedDomains": ["*"],
+                                  "strictAllowlist": True}
+        return sandbox
+
     def settings(self, role: str, workspace: Path) -> dict:
         denied = self._deny_paths(role, workspace)
         read_only = self._deny_write_paths(workspace)
@@ -264,24 +388,8 @@ class AgentPolicy:
             deny.append(f"Edit(/{p})")
             deny.append(f"Edit(/{p}/**)")
 
-        sandbox: dict = {
-            "enabled": True,
-            # A sandbox that cannot start otherwise warns and runs the command
-            # unsandboxed, which for this policy means no enforcement at all.
-            "failIfUnavailable": True,
-            "allowUnsandboxedCommands": False,
-            "filesystem": {
-                "denyRead": [str(p) for p in denied],
-                "allowWrite": [str(p) for p in self.allow_write(role)],
-                "denyWrite": [str(workspace / ".claude"), str(HOOK_SCRIPT),
-                              *(str(p) for p in denied), *(str(p) for p in read_only)],
-            },
-        }
-        if self.offline(role):
-            sandbox["network"] = {"allowedDomains": [], "deniedDomains": ["*"],
-                                  "strictAllowlist": True}
-
-        out: dict = {"permissions": {"deny": deny}, "sandbox": sandbox}
+        out: dict = {"permissions": {"deny": deny}, "sandbox": self.sandbox(role, workspace,
+                                                                          denied, read_only)}
         if self.offline(role) or self.no_cluster(role) or self.deny_urls(role):
             hook =" ".join(shlex.quote(x) for x in (
                 self.hook_python, str(HOOK_SCRIPT), str(workspace / POLICY_RELPATH)))
@@ -292,25 +400,48 @@ class AgentPolicy:
         return out
 
     def policy_document(self, role: str) -> dict:
-        """What the hook reads: this turn's role and what it may not reach."""
+        """What the hook reads: this turn's role and what it may not reach.
+
+        ``sandbox`` travels with it so the hook's refusal messages can say what is actually
+        enforcing them: under ``strict`/``auto` an OS sandbox also refuses the connection,
+        under ``off`` nothing does and the message must not claim otherwise.
+        """
         return {
             "role": role,
             "oracle_mode": self.oracle_mode,
             "offline": self.offline(role),
             "no_cluster": self.no_cluster(role),
+            "sandbox": self.sandbox_mode,
             "deny_urls": self.deny_urls(role),
             "deny_paths": [str(p) for p in self.deny_read(role)],
         }
 
+    @property
+    def sandboxed(self) -> bool:
+        """Whether an OS-level sandbox backs the policy this turn."""
+        return self.sandbox_mode in (SANDBOX_STRICT, SANDBOX_AUTO)
+
     def notice(self, role: str) -> str:
         lines = ["## Runtime environment constraints (enforced by the harness, not advice)"]
         cuda = lang_mode.is_cuda(self.language)
+        tilelang = lang_mode.is_tilelang(self.language)
+        read_sources = ("CUDA / CUTLASS headers" if cuda
+                        else "TileLang package sources" if tilelang
+                        else "DSL package sources")
+        if not self.sandboxed:
+            lines.append(
+                "- **No OS sandbox this turn** ([loop] agent_sandbox = off, this machine cannot "
+                "start one): the harness's deny rules and its PreToolUse hook are policy checks, "
+                "not OS isolation. They are still enforced, and a call they refuse is refused; "
+                "do not try to route around them.")
         if self.offline(role):
             lines.append(
                 "- **No network this turn**: WebFetch / WebSearch are removed, and every outbound "
-                "connection from Bash (curl, pip, git clone, python networking) is refused by the "
-                "sandbox. Do not try to go online; look up interface details in the KB, the local "
-                + ("CUDA / CUTLASS headers" if cuda else "DSL package sources")
+                "connection from Bash (curl, pip, git clone, python networking) "
+                + ("is refused by the policy." if not self.sandboxed
+                   else "is refused by the sandbox.")
+                + " Do not try to go online; look up interface details in the KB, the local "
+                + read_sources
                 + " and your own probes.")
             lines.append(
                 "- **You may write only your own working directory**: the rest of the repo "
@@ -321,9 +452,10 @@ class AgentPolicy:
                 "`.gitattributes` come from the card, and every job runs the card's copy; a delivery "
                 "that modifies them is not evaluated at all and is REVERTed outright.")
             if self.dsl_source_dirs:
-                lines.append(("- Readable local CUDA / CUTLASS header directories: " if cuda
-                              else "- Readable local DSL package sources: ") + ", ".join(
-                    f"`{p}`" for p in self.dsl_source_dirs))
+                label = ("- Readable local CUDA / CUTLASS header directories: " if cuda
+                         else "- Readable local TileLang package sources: " if tilelang
+                         else "- Readable local DSL package sources: ")
+                lines.append(label + ", ".join(f"`{p}`" for p in self.dsl_source_dirs))
         elif role == ROLE_STUDENT:
             lines.append(
                 "- You may go online for public material (docs, forums, issues, papers), but "
@@ -517,10 +649,17 @@ def declaration_problems(cfg: dict, oracle_mode: str) -> list[str]:
     lc = cfg.get("loop", {})
     problems = []
     for key in (KEY_REF_SOURCE_PATHS, KEY_REF_SOURCE_URLS, KEY_DSL_SOURCE_DIRS,
-                KEY_EXTRA_ALLOW_WRITE):
+                KEY_EXTRA_ALLOW_WRITE, KEY_TILELANG_SOURCE_DIRS, KEY_CUDA_SOURCE_DIRS):
         if key in lc and not (isinstance(lc[key], list)
                               and all(isinstance(x, str) for x in lc[key])):
             problems.append(f"[loop] {key} must be a list of strings, got {lc[key]!r}")
+    # The three policy modes are validated here as well as in resolve_modes, so a typo is
+    # reported with every other declaration problem at launch (exit 15) instead of only
+    # when the first policy happens to be built.
+    try:
+        resolve_modes(cfg)
+    except ValueError as e:
+        problems.append(f"[loop] {e}")
     if oracle_mode == ORACLE_BLACKBOX:
         for key, example in ((KEY_REF_SOURCE_PATHS, '["~/refs/vendor/DeepGEMM"]'),
                              (KEY_REF_SOURCE_URLS, '["github.com/deepseek-ai/DeepGEMM"]')):
@@ -544,6 +683,22 @@ def declaration_warnings(cfg: dict, dsl_source=None, language: str | None = None
     CUDA-mode run is checked for its header trees instead (``cuda_source_dirs``)."""
     lc = cfg.get("loop", {})
     out = []
+    if lang_mode.is_tilelang(language):
+        for key in (KEY_REF_SOURCE_PATHS, KEY_TILELANG_SOURCE_DIRS, KEY_DSL_SOURCE_DIRS):
+            for raw in lc.get(key, []) if isinstance(lc.get(key), list) else []:
+                if not _abs(raw).exists():
+                    out.append(f"[loop] {key} entry {raw!r} does not exist on this machine")
+        # The TileLang mode reads the tilelang package itself; a run whose key is empty and
+        # whose resolver found nothing has an offline student with no API to read.
+        if not (lc.get(KEY_TILELANG_SOURCE_DIRS) or lc.get(KEY_DSL_SOURCE_DIRS)):
+            if dsl_source is not None:
+                if not dsl_source.defaulted:
+                    out.extend(f"[loop] {n}" for n in dsl_source.notes)
+            else:
+                out.append(f"[loop] {KEY_TILELANG_SOURCE_DIRS} is empty - the TileLang "
+                           f"student is offline, so it can read TileLang only from a local "
+                           f"checkout named here")
+        return out
     if lang_mode.is_cuda(language):
         for key in (KEY_REF_SOURCE_PATHS, KEY_CUDA_SOURCE_DIRS, KEY_DSL_SOURCE_DIRS):
             for raw in lc.get(key, []) if isinstance(lc.get(key), list) else []:
@@ -585,15 +740,81 @@ def secret_files_for(repo_root: Path, op: str | None, teacher_trees) -> tuple[Pa
     return tuple(dict.fromkeys(out))
 
 
+def resolve_modes(cfg: dict, environ=None) -> tuple[str, str, str]:
+    """(sandbox, network, cluster) for a run, from loop.toml then the machine environment.
+
+    Precedence is loop.toml [loop] key -> FK_AGENT_* in the environment -> the default.
+    The machine environment is a real layer, not a convenience: the earliest policy this
+    run builds is ``launch.write_judge``'s, which happens BEFORE the card's loop.toml
+    exists (the judge is written first, the card from it), so a setting that lived only
+    in loop.toml could not reach it. local.env is exported into the process before then
+    (``launch._entered``), which is what makes this work for every construction site.
+
+    An unknown value in either layer is an error, not a silent default: a typo in
+    ``agent_sandbox`` that fell back to strict would refuse every Bash call on a machine
+    that cannot sandbox, and a typo in ``agent_network`` that fell back to the role
+    default would silently leave a session offline after someone asked for online.
+    """
+    environ = os.environ if environ is None else environ
+    lc = cfg.get("loop", {}) if isinstance(cfg, dict) else {}
+    if not isinstance(lc, dict):
+        lc = {}
+
+    def pick(key: str, env_key: str, allowed: tuple[str, ...], default: str) -> str:
+        for raw in (lc.get(key), environ.get(env_key)):
+            if raw is None or (isinstance(raw, str) and not raw.strip()):
+                continue
+            value = str(raw).strip().lower()
+            if value not in allowed:
+                raise ValueError(f"{key} must be one of {list(allowed)}, got {raw!r}")
+            return value
+        return default
+
+    return (pick(KEY_AGENT_SANDBOX, ENV_AGENT_SANDBOX, SANDBOX_MODES, DEFAULT_SANDBOX),
+            pick(KEY_AGENT_NETWORK, ENV_AGENT_NETWORK, NETWORK_MODES, ""),
+            pick(KEY_AGENT_CLUSTER, ENV_AGENT_CLUSTER, CLUSTER_MODES, ""))
+
+
+def with_machine(cfg: dict, machine) -> dict:
+    """``cfg`` with the machine layer folded in as [loop] keys, card values still winning.
+
+    Why this exists beside the environment lookup in ``resolve_modes``: the two carry the
+    same machine layer. The environment is what ``launch._entered`` exports, and it is
+    right for a process the run started; a ``Machine`` is what a caller that loaded
+    local.env directly holds, and it is right for a stage that builds a policy without
+    that context manager (an adapter, a harness, a test). Folding one into the other here
+    means a construction site passes WHATEVER it has and gets the same answer, instead of
+    each site remembering which carrier to read.
+
+    Only keys the card did NOT declare are filled in, so loop.toml keeps its precedence.
+    """
+    modes = getattr(machine, "policy_modes", dict)()
+    if not modes:
+        return cfg
+    out = dict(cfg or {})
+    lc = dict(out.get("loop") or {})
+    for key, value in modes.items():
+        lc.setdefault(key, value)
+    out["loop"] = lc
+    return out
+
+
 def from_config(cfg: dict, *, oracle_mode: str, repo_root: Path,
                 teacher_trees: list[Path],
                 dsl_source_dirs_default: tuple[Path, ...] | list[Path] = (),
-                op: str | None = None, language: str = "cutedsl") -> AgentPolicy:
+                op: str | None = None, language: str = "cutedsl",
+                environ=None) -> AgentPolicy:
     """``dsl_source_dirs_default``: what ``loop.dsl_source.resolve`` derived for an
     empty ``[loop] dsl_source_dirs`` — used only when the key is empty; a declared
     list wins as written. ``op``: the operator card, whose ``submit.local.toml`` is
-    then denied to the student and a blackbox teacher (``secret_files``)."""
+    then denied to the student and a blackbox teacher (``secret_files``).
+
+    ``environ``: where FK_AGENT_* come from (the process, ``launch._entered`` has exported
+    local.env into it before any policy is built). Every construction site goes through
+    here, which is how the three modes reach the early ones (write_judge, the /goal session)
+    and not only the main loop."""
     lc = cfg.get("loop", {})
+    sandbox_mode, network_mode, cluster_mode = resolve_modes(cfg, environ)
     declared = lc.get(KEY_DSL_SOURCE_DIRS, [])
     if lang_mode.is_cuda(language):
         declared = lc.get(KEY_CUDA_SOURCE_DIRS) or declared
@@ -610,4 +831,7 @@ def from_config(cfg: dict, *, oracle_mode: str, repo_root: Path,
         secret_files=secret_files_for(repo_root, op, teacher_trees),
         language=language,
         source_teacher_denies=bool(lc.get(KEY_SOURCE_TEACHER_DENIES, False)),
+        sandbox_mode=sandbox_mode,
+        network_mode=network_mode,
+        cluster_mode=cluster_mode,
     )

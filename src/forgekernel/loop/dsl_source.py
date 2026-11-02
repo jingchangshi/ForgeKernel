@@ -34,10 +34,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 LANGUAGE_CUTEDSL = "cutedsl"
+LANGUAGE_TILELANG = "tilelang-ascend"
 KEY_DSL_PYTHON = "dsl_python"
+KEY_TILELANG_SOURCE_DIRS = "tilelang_source_dirs"
 ENV_DSL_PIN = "DSL_PIN"
 DIST_SHELL = "nvidia-cutlass-dsl"
 DIST_CORE = "nvidia-cutlass-dsl-libs-core"   # the pure-Python DSL body
+# The TileLang mode reads the TileLang Python package itself (tilelang/: language/,
+# ascend/, the compiler front end). It is a source checkout on this machine rather than
+# a wheel under a dsl_packages/ directory, so it gets its own probe: the module
+# directory of "import tilelang" in the target interpreter, never an import side effect
+# of this process. [loop] tilelang_source_dirs wins over everything; the fallback path
+# is the editable checkout the plan pins, and it is only used when it exists.
+TILELANG_MODULE = "tilelang"
+TILELANG_FALLBACK_SOURCE = Path("/home/s00653124/workspace/tilelang/tilelang")
 PROBE_TIMEOUT_S = 60
 
 ORIGIN_EXPLICIT = "explicit"
@@ -146,6 +156,78 @@ def _overlaps(a: Path, b: Path) -> bool:
     return a == b or a in b.parents or b in a.parents
 
 
+def probe_tilelang_source(python: str, *, env: dict | None = None,
+                          timeout_s: float = PROBE_TIMEOUT_S) -> Path | None:
+    """The ``tilelang`` package directory ``python`` imports, or None.
+
+    Import-free where it matters: ``importlib.util.find_spec`` locates the package
+    without running ``tilelang/__init__.py`` (importing it loads the compiler and, on an
+    NPU box, the CANN runtime), and the loop process does not have to be the interpreter
+    the jobs run in. A checkout on ``sys.path`` (editable install) resolves like any other.
+    """
+    code = ("import importlib.util, os, json\n"
+            f"spec = importlib.util.find_spec({TILELANG_MODULE!r})\n"
+            "roots = [os.path.dirname(os.path.abspath(p)) for p in (spec.submodule_search_locations or [])] if spec else []\n"
+            "print(json.dumps([r for r in roots if os.path.isdir(r)]))\n")
+    try:
+        proc = subprocess.run([python, "-c", code], capture_output=True, text=True,
+                              timeout=timeout_s, env=env)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    line = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else ""
+    try:
+        roots = json.loads(line)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(roots, list):
+        return None
+    for r in roots:
+        p = Path(str(r))
+        if (p / "__init__.py").is_file():
+            return p.resolve()
+    return None
+
+
+def _tilelang_source(cfg: dict, *, submit_env: dict | None, python: str | None,
+                     probe_env: dict | None) -> DslSource:
+    """Where a tilelang-ascend run may read TileLang's Python source from.
+
+    The DSL mode's version gate has no counterpart here: TileLang is not pinned by an
+    ``[env] DSL_PIN`` in a card (its own version is whatever the editable checkout is),
+    so the source is the checkout the interpreter imports -- the same tree the kernel is
+    compiled against. When no interpreter can be probed, the plan's pinned checkout is
+    used if it exists, and the note says it was the fallback rather than the interpreter's
+    answer, so a run on another TileLang install does not silently read the wrong one.
+    """
+    lc = cfg.get("loop", {}) if isinstance(cfg, dict) else {}
+    declared = lc.get(KEY_TILELANG_SOURCE_DIRS) or []
+    if isinstance(declared, list) and declared:
+        return DslSource(dirs=tuple(_abs(p) for p in declared), origin=ORIGIN_EXPLICIT)
+    interp = python or lc.get(KEY_DSL_PYTHON) or sys.executable
+    interp_note = f"[loop] {KEY_DSL_PYTHON}" if lc.get(KEY_DSL_PYTHON) else "the loop's interpreter"
+    found = probe_tilelang_source(str(interp), env=probe_env)
+    origin, how = ORIGIN_DEFAULT, f"{TILELANG_MODULE} imported by {interp_note} ({interp})"
+    if found is None:
+        if not TILELANG_FALLBACK_SOURCE.is_dir():
+            return DslSource(notes=(
+                "dsl_source_dirs is empty and the tilelang package could not be located in "
+                f"{interp_note} ({interp}); the student is offline, so it can read TileLang's "
+                f"API only from a checkout named in [loop] {KEY_TILELANG_SOURCE_DIRS}",))
+        found = TILELANG_FALLBACK_SOURCE.resolve()
+        how = f"the pinned checkout {found} (no interpreter could be probed)"
+    refs = [_abs(p) for p in (lc.get("ref_source_paths") or []) if isinstance(p, str)]
+    clash = [ref for ref in refs if _overlaps(found, ref)]
+    if clash:
+        return DslSource(notes=(
+            f"dsl_source_dirs is empty; the TileLang source at {found} overlaps the declared "
+            f"reference source {clash[0]} — not defaulting (the DSL door must not open "
+            f"onto the reference). Declare [loop] {KEY_TILELANG_SOURCE_DIRS} explicitly",))
+    return DslSource(dirs=(found,), origin=origin,
+                     notes=(f"dsl_source_dirs: defaulted to {[str(found)]} ({how})",))
+
+
 def resolve(cfg: dict, *, language: str, submit_env: dict | None = None,
             python: str | None = None, probe_env: dict | None = None,
             pin_readable: bool = True) -> DslSource:
@@ -165,6 +247,9 @@ def resolve(cfg: dict, *, language: str, submit_env: dict | None = None,
     declared = lc.get("dsl_source_dirs") or []
     if isinstance(declared, list) and declared:
         return DslSource(dirs=tuple(_abs(p) for p in declared), origin=ORIGIN_EXPLICIT)
+    if language == LANGUAGE_TILELANG:
+        return _tilelang_source(cfg, submit_env=submit_env, python=python,
+                                probe_env=probe_env)
     if language != LANGUAGE_CUTEDSL:
         return DslSource(notes=(f"language={language!r}: no DSL source to default",))
     if not pin_readable:

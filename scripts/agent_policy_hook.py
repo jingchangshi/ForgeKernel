@@ -115,6 +115,35 @@ def _reference_hit(patterns: list[str], tool: str, text: str) -> str | None:
     return None
 
 
+def _without_sandbox(policy: dict) -> bool:
+    """Whether this run deliberately has no OS sandbox (loop/agent_policy.py SANDBOX_OFF).
+
+    Set as ``policy["sandbox"] == "off"`` by the harness. A policy written by an older
+    harness has no such key, and those runs had the sandbox: absent means "not off", which
+    keeps the sandbox sentence true for them.
+    """
+    return str(policy.get("sandbox") or "").strip().lower() == "off"
+
+
+def _network_refusal(policy: dict, role: str, what: str) -> str:
+    """Why a network-reaching call is refused, in words that are true right now.
+
+    "The sandbox refuses the connection as well" is true when an OS sandbox is running and
+    a lie when it is not. Under agent_sandbox = off the only enforcement is the deny rules
+    and this hook, which are policy checks: saying so is both honest and more useful -- an
+    agent told "the sandbox stops it too" stops looking for a way around, and one told the
+    truth knows the refusal is a rule it must keep.
+    """
+    base = (f"BLOCKED by the ForgeKernel agent policy: the {role} works offline in this "
+            f"run and {what} reaches the network. Nothing outside this machine is "
+            f"available this turn")
+    if _without_sandbox(policy):
+        return (base + " — refused by the harness's deny rules and this policy hook "
+                "(policy checks, not OS isolation: this run deliberately runs without the "
+                "OS sandbox).")
+    return base + " — the sandbox refuses the connection as well."
+
+
 def decide(policy: dict, event: dict) -> str | None:
     """The refusal message for this tool call, or None to allow it."""
     tool = event.get("tool_name", "")
@@ -125,13 +154,13 @@ def decide(policy: dict, event: dict) -> str | None:
         if tool in ("WebFetch", "WebSearch"):
             return (f"BLOCKED by the ForgeKernel agent policy: the {role} works offline "
                     f"in this run, so {tool} is not available. Interface facts come from "
-                    f"the KB, the DSL sources on this machine and your own probes.")
+                    f"the KB, the DSL sources on this machine and your own probes."
+                    + ("" if not _without_sandbox(policy) else
+                       " There is no OS sandbox on this run: the tool is removed and this "
+                       "hook refuses it, which are policy checks, not OS isolation."))
         for text in texts:
             if _NET_CMD.search(text) or _NET_URL.search(text):
-                return (f"BLOCKED by the ForgeKernel agent policy: the {role} works "
-                        f"offline in this run and this command reaches the network. "
-                        f"Nothing outside this machine is available this turn — the "
-                        f"sandbox refuses the connection as well.")
+                return _network_refusal(policy, role, "this command")
     if (policy.get("offline") or policy.get("no_cluster")) and tool == "Bash":
         for text in texts:
             if _CLUSTER_CMD.search(text):

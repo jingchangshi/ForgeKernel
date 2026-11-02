@@ -1977,8 +1977,11 @@ def _student_denied_oracle(mode: str, oracle_flag: str | None, cfg: dict,
     return list(dict.fromkeys([*_oracle_paths(mode, oracle_flag, cfg), *declared]))
 
 
-# valid kernel implementation languages (governs the student prompt + harness).
-LANGUAGES = ("cuda-cpp", "inline-ptx", "triton", "cutlass-cpp", "cutedsl", "cuda-sol")
+# The languages --language accepts. Every entry must be one lang_mode.mode_of() can
+# place in a mode: an unregistered name here would be a flag value that launches a run
+# which cannot pick a KB (loop/lang_mode.py raises rather than defaulting).
+LANGUAGES = tuple(sorted(lang_mode.CUTEDSL_LANGUAGES | lang_mode.CUDA_LANGUAGES
+                         | lang_mode.TILELANG_LANGUAGES))
 
 
 def _card_kernel_file(op_dir: Path) -> str:

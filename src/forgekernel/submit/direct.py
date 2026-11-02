@@ -8,9 +8,11 @@ One run:
 1. ``git archive`` the requested branch of the op's tree and extract it fresh -- locally
    under ``<op>/.exec/tree``, or on the host
    under ``<workdir>/<run>/<op>`` -- so a run never inherits the last run's build products.
-2. Take the GPU lock, then ``bash gpu_entry.sh <mode>`` with the tree's ``[env]``,
-   ``CUDA_VISIBLE_DEVICES`` and ``TASK_TIMEOUT``. The lock is per GPU and per machine
-   (two runs on one GPU would time each other), shared by every op and every run.
+2. Take the device lock, then ``bash gpu_entry.sh <mode>`` with the tree's ``[env]``,
+   the device family's VISIBLE variable (``CUDA_VISIBLE_DEVICES`` or
+   ``ASCEND_RT_VISIBLE_DEVICES``, forgekernel.device) and ``TASK_TIMEOUT``. The lock is
+   per physical device and per machine (two runs on one device would time each other),
+   shared by every op and every run.
 3. Map the exit: rc 0 -> Succeeded; the task ran and failed -> Failed; ssh could not
    deliver it (no begin marker) -> retried, then Failed with TRANSPORT_ERROR_MARKER, which
    the loop reports as a transport problem rather than charging the kernel.
@@ -34,6 +36,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+from forgekernel import device
 from forgekernel.submit.config import SubmitConfig, is_secret_env
 from forgekernel.submit.jobs import (BEGIN_MARKER, RUN_HEADROOM_S, STATUS_FAILED,
                                      STATUS_SUCCEEDED, TRANSPORT_ERROR_MARKER, locked)
@@ -62,11 +65,17 @@ def lock_dir() -> Path:
 
 
 @contextmanager
-def gpu_lock(gpu: str, log_file=None, poll_s: float = 30.0):
-    """Hold this machine's lock on GPU ``gpu`` for the duration; say so while waiting."""
+def gpu_lock(gpu: str, log_file=None, poll_s: float = 30.0, kind: str = "cuda"):
+    """Hold this machine's lock on device ``gpu`` of family ``kind`` for the duration;
+    say so while waiting.
+
+    The lock's name comes from forgekernel.device, so a CUDA run and an Ascend run never
+    think they are waiting on each other's device (logical ``npu:0`` is not physical
+    card 0), and two Ascend runs on one card still serialise."""
     d = lock_dir()
     d.mkdir(parents=True, exist_ok=True)
-    with open(d / f"gpu{gpu}.lock", "w") as fh:
+    name = device.lock_name(kind, gpu)
+    with open(d / f"{name}.lock", "w") as fh:
         waited = 0.0
         while True:
             try:
@@ -74,8 +83,8 @@ def gpu_lock(gpu: str, log_file=None, poll_s: float = 30.0):
                 break
             except OSError:
                 if log_file is not None and waited == 0.0:
-                    log_file.write(f"[direct] GPU {gpu} is in use by another forgekernel run "
-                                   f"-- waiting\n")
+                    log_file.write(f"[direct] {kind.upper()} {gpu} is in use by another "
+                                   f"forgekernel run -- waiting\n")
                     log_file.flush()
                 time.sleep(poll_s)
                 waited += poll_s
@@ -111,7 +120,14 @@ def _entry_argv(cfg: SubmitConfig, mode: str) -> list[str]:
 
 
 def _job_env(cfg: SubmitConfig) -> dict:
-    return {**cfg.env, "TASK_TIMEOUT": str(cfg.timeout), "CUDA_VISIBLE_DEVICES": cfg.exec_gpu}
+    """The job's environment: the card's [env], its timeout, and the ONE device it gets.
+
+    Which variable hands the device over depends on the family (forgekernel.device): a
+    CUDA job gets ``CUDA_VISIBLE_DEVICES``, an Ascend job ``ASCEND_RT_VISIBLE_DEVICES``.
+    The physical id is what local.env named; inside the process it is device 0 either
+    way, and the job's log records both (see DirectRunner._say_device)."""
+    return {**cfg.env, "TASK_TIMEOUT": str(cfg.timeout),
+            device.visible_env(cfg.exec_kind): cfg.exec_gpu}
 
 
 class DirectRunner:
@@ -128,6 +144,15 @@ class DirectRunner:
     def deadline_s(self) -> float:
         return float(self.cfg.timeout) + RUN_HEADROOM_S
 
+    def _say_device(self, log_file, where: str) -> None:
+        """Record the physical device this job was handed and what it is in-process.
+
+        The two are not the same thing: a job handed physical 3 sees device 0, so a
+        receipt that says only "3" cannot be compared with one that says only "npu:0"."""
+        log_file.write(f"[direct] {where} {device.describe(self.cfg.exec_kind, self.cfg.exec_gpu)}"
+                       f"\n")
+        log_file.flush()
+
     def run_mode(self, branch: str, mode: str, log_file) -> str:
         with locked(Path(self.cfg.op_dir)):
             payload = _payload(self.cfg, branch)
@@ -143,9 +168,10 @@ class DirectRunner:
         tree.mkdir(parents=True)
         _extract(payload, tree)
         env = {**os.environ, **_job_env(self.cfg)}
-        log_file.write(f"[direct] local GPU {self.cfg.exec_gpu} branch={branch} mode={mode}\n")
+        self._say_device(log_file, "local")
+        log_file.write(f"[direct] local branch={branch} mode={mode}\n")
         log_file.flush()
-        with gpu_lock(self.cfg.exec_gpu, log_file):
+        with gpu_lock(self.cfg.exec_gpu, log_file, kind=self.cfg.exec_kind):
             log_file.write(f"{BEGIN_MARKER}\n")
             log_file.flush()
             proc = self._popen(_entry_argv(self.cfg, mode), cwd=tree, env=env,
@@ -187,7 +213,8 @@ class DirectRunner:
                   if k not in secrets]
         # a secret is read off stdin, never spelled on a command line `ps` shows
         parts += [f"{{ IFS= read -r {k} || true; }} && export {k}" for k in secrets]
-        lock = shlex.quote(f"{self.cfg.exec_workdir.rstrip('/')}/.gpu{self.cfg.exec_gpu}.lock")
+        lock = shlex.quote(f"{self.cfg.exec_workdir.rstrip('/')}/."
+                           f"{device.lock_name(self.cfg.exec_kind, self.cfg.exec_gpu)}.lock")
         entry = " ".join(shlex.quote(a) for a in _entry_argv(self.cfg, mode))
         parts.append(f"echo {BEGIN_MARKER}")
         parts.append(f"setsid --wait sh -c {shlex.quote(_SESSION_SCRIPT)} {lock} {entry}")
@@ -220,8 +247,9 @@ class DirectRunner:
                 failures.append(f"sync to {self.cfg.exec_host} (rc={sync.returncode}): "
                                 f"{err.strip()[-200:]}")
             else:
-                log_file.write(f"[direct] ssh {self.cfg.exec_host} GPU {self.cfg.exec_gpu} "
-                               f"branch={branch} mode={mode}\n")
+                self._say_device(log_file, f"ssh {self.cfg.exec_host}")
+                log_file.write(f"[direct] ssh {self.cfg.exec_host} branch={branch} "
+                               f"mode={mode}\n")
                 log_file.flush()
                 start = log_file.tell() if hasattr(log_file, "tell") else None
                 proc = self._popen(self._ssh(self._exec_cmd(mode)), stdout=log_file,

@@ -404,7 +404,7 @@ def _drive(run, task, machine, *, resuming: bool, harvest_only: bool) -> int:
     feedback = ""
     for attempt in range(1, judge_mod.ATTEMPTS + 1):
         if not rec.get("judge_written"):
-            write_judge(run, task, check_dir, deny, feedback)
+            write_judge(run, task, check_dir, deny, feedback, machine=machine)
             run.update(judge_written=True, stage="judge written")
             rec = run.record()
         check = judge_mod.load_check(check_dir)
@@ -472,16 +472,33 @@ def _drive_board(run, task, machine, *, resuming: bool, harvest_only: bool) -> i
     return run_loop(run, task, resuming=resuming, harvest_only=harvest_only)
 
 
-def write_judge(run, task, check_dir: Path, deny: list[str], feedback: str = "") -> None:
-    """Teacher turns until the judge's files pass the static check."""
+def write_judge(run, task, check_dir: Path, deny: list[str], feedback: str = "",
+                machine=None) -> None:
+    """Teacher turns until the judge's files pass the static check.
+
+    ``machine``: the run's local.env (``load_machine``), when the caller has it. It is the
+    same machine layer ``_entered`` exports, but carrying it explicitly means the judge's
+    policy is right even for a caller that drives this function without that context
+    manager -- and the judge is the EARLIEST policy a run builds, so a mode that fails to
+    arrive here is a mode the run never had."""
+    from forgekernel.loop import agent_policy as agent_policy_mod
     from forgekernel.loop.agent_policy import AgentPolicy
     from forgekernel.loop.cli import RealBackend
     check_dir.mkdir(parents=True, exist_ok=True)
     blackbox = task.mode == MODE_BLACKBOX
+    # This is the EARLIEST agent policy a run builds -- the judge is written before the
+    # card, so the card's loop.toml does not exist yet. The three policy modes are
+    # therefore resolved from both machine carriers (the Machine when the caller has it,
+    # and FK_AGENT_* which _entered exported), so a run configured agent_sandbox = off
+    # does not open its first teacher turn under a strict sandbox that cannot start here.
+    machine_cfg = agent_policy_mod.with_machine({}, machine) if machine is not None else {}
+    sandbox_mode, network_mode, cluster_mode = agent_policy_mod.resolve_modes(machine_cfg)
     policy = AgentPolicy(oracle_mode="blackbox" if blackbox else "source",
                          repo_root=repo_root(), ref_source_paths=tuple(Path(p) for p in deny),
                          ref_source_urls=(), teacher_trees=(), dsl_source_dirs=(),
-                         secret_files=(), language=task.loop_language)
+                         secret_files=(), language=task.loop_language,
+                         sandbox_mode=sandbox_mode, network_mode=network_mode,
+                         cluster_mode=cluster_mode)
     be = RealBackend(task.name, check_dir, None, "forge-judge", "forge-judge@localhost",
                      teacher_agent_cmd=agent_command(task.teacher, "teacher"),
                      agent_policy=policy)

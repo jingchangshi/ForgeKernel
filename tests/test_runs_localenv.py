@@ -20,7 +20,7 @@ from test_task import MINIMAL, _kb, _task
 def test_no_local_env_means_this_machine_gpu_0(tmp_path):
     m = load_machine(tmp_path, environ={})
     assert (m.delivery, m.gpu, m.remote_host) == ("local", "0", "")
-    assert m.describe() == "this machine (GPU 0)"
+    assert m.describe() == "this machine (device 0)"
 
 
 def test_local_env_parses_comments_exports_and_quotes(tmp_path):
