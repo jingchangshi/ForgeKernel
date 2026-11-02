@@ -1,0 +1,15 @@
+{
+  "run": "rmsnorm-ascend-vendor_261102-192723-092c",
+  "reference": "torch_npu.npu_rms_norm(x, w, 1e-6)[0]",
+  "device": "physical NPU 1",
+  "status": "calibration match",
+  "shapes": [
+    "8192x4096",
+    "64x4096"
+  ],
+  "groups_per_shape": 4,
+  "max_normalized_error": 0.0027624309392265192,
+  "tolerance": 0.0078125,
+  "limitations": "Calibration compares vendor output to generated judge on these eight input groups. It is not candidate correctness or performance acceptance.",
+  "source_job_log": ".artifacts/rmsnorm-ascend-vendor_261102-192723-092c/operators/rmsnorm-ascend-vendor/.jobs/1793618919/log.txt"
+}
