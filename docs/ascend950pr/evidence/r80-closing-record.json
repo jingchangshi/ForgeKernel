@@ -1,0 +1,57 @@
+{
+  "round": "80",
+  "date": "2026-11-02",
+  "topic": "closing record at the round budget",
+  "budget": {
+    "roundsStarted": 80,
+    "maxGoalRounds": 80
+  },
+  "final_state": {
+    "decode": {
+      "status": "EXCEED",
+      "windows": 3,
+      "points": [
+        1.372594123,
+        1.405644741,
+        1.354979381
+      ],
+      "lower_bounds": [
+        1.35605407,
+        1.378313143,
+        1.336322032
+      ]
+    },
+    "prefill": {
+      "status": "FAIL",
+      "windows": 4,
+      "points": [
+        0.807361385,
+        0.81331163,
+        0.771066795,
+        0.850226523
+      ],
+      "best_lower_bound": 0.829377796,
+      "slowdown": "15-23%"
+    }
+  },
+  "objective_met": false,
+  "why_not_met": "prefill never reached a point estimate of 1.0 in any of four clean paired windows, and its best lower bound was 0.829 against a required 0.98",
+  "levers_exhausted": [
+    "per-core contiguous vs interleaved partitioning",
+    "tile rows 1/2/4/8 (8 refused at launch by the UB budget)",
+    "pipeline depth stages 2/3/4/5/6",
+    "output buffer depth 1/2/3",
+    "accumulation chains 2/4/8 per row",
+    "L2 cache policy per direction (FV/LV/PREF/RED/NOTALLOC/IDS/EXCLUSIV/WBH/WTS)",
+    "two-phase reduction, first with a shared buffer (racy, rejected) then with per-row registers",
+    "manual Pipelined order/stage scheduling",
+    "DMA chunk size, which stops mattering once the L2 policy is set"
+  ],
+  "residual_cause": "mixed read+write throughput: our kernel sustains 1.97 TB/s against the vendor 2.42 TB/s; the isolated rates are 2.35 reading and 3.08 writing, so neither direction is capped - TileLang exposes no control over DRAM page locality or stream count",
+  "honesty_note": "the objective is not marked complete. Decode is met and reproducible; prefill is not.",
+  "artifacts": {
+    "evidenceFiles": 107,
+    "candidateDirs": 36,
+    "commitsUnpushed": 101
+  }
+}
