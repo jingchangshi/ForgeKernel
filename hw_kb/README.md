@@ -1,7 +1,7 @@
 # Hardware knowledge base (hw_kb)
 
-An operator-agnostic library of GPU-certified hardware-interface recipes, one tree per kernel
-language and, inside it, one tree per GPU architecture:
+An operator-agnostic library of device-certified hardware-interface recipes, one tree per kernel
+language and, inside it, one tree per GPU / NPU architecture:
 
 ```
 hw_kb/
@@ -13,9 +13,13 @@ hw_kb/
     README.md
     TEMPLATE.md
     sm100/
+  tilelang-ascend/   # TileLang Python DSL runs on the Ascend NPU (task language "tilelang-ascend")
+    README.md
+    TEMPLATE.md
+    ascend950pr/
 ```
 
 A run reads and writes exactly one tree, `hw_kb/<language>/<arch>/`, picked by the task's `language`
-and `arch` (`src/forgekernel/loop/lang_mode.py`). The two language trees are independent: a reading
-certified with one language's probe is not carried over to the other. See each tree's README for
+and `arch` (`src/forgekernel/loop/lang_mode.py`). The language trees are independent: a reading
+certified with one language's probe is not carried over to another. See each tree's README for
 the rules.
