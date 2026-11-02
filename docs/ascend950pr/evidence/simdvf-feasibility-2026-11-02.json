@@ -1,0 +1,15 @@
+{
+  "experiment": "SimdVF feasibility probe for a prefill rewrite",
+  "date": "2026-11-02",
+  "card": "npu:0",
+  "question": "can the T.simd.* register-level SIMD micro-API run on this Ascend950PR, so a SimdVF rewrite of the RMSNorm compute is even possible?",
+  "probe": "a T.SimdVF kernel doing vld -> vcpadd(pairwise reduce) -> vsts over 64 float32 was compiled and RUN on the NPU; result matched torch exactly (match=True)",
+  "result": "FEASIBLE - T.SimdVF and T.simd.* execute correctly on this machine",
+  "api_recipe": {
+    "lanes": "a float32 vector register is 32 lanes (pset(32,'PAT_VL32')); bf16 is handled with vld(dist='UNPK_B16') + vcvt(target,'float32',part=0/1)",
+    "ops_available": "vld/vsts/vcvt/vmul/vadds/vmuls/vdup(broadcast)/vsqrtsqrt/vdiv/vcpadd+vcadd(pairwise reduce)/vdupv",
+    "sketch": "per row of D=4096: acc=0 (32 f32 lanes); loop 128 chunks: v=vld(bf16 UNPK), f=vcvt(f32), acc=vadd(acc, vmul(f,f)); reduce acc 32->1 with repeated vcadd; rstd=1/sqrt(sum/D+eps) broadcast via vdup; loop chunks: v=vld, f=vcvt, y=vmul(vmul(f,rstd), w_f32), vcvt bf16, vsts"
+  },
+  "effort_assessment": "writing this correctly requires exact lane/dist/part/extent handling for bf16<->f32, a horizontal reduction chain, and mask management. It is a vendor-level implementation expected to take several careful iterations with correctness debugging before any timing gain - high risk, not a parameter change.",
+  "decision": "feasibility proven and the recipe recorded; the full SIMD rewrite is the concrete path to prefill parity but is a large, high-risk effort not safely completable blindly in one round."
+}
