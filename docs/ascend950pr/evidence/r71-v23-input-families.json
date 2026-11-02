@@ -1,0 +1,51 @@
+{
+  "round": "71",
+  "date": "2026-11-02",
+  "topic": "v23 precision across four input families on both shapes",
+  "method": "task judge input generator, CPU float64 reference, leaderboard task_error, limit 0.0078125",
+  "results": [
+    {
+      "shape": "64x4096",
+      "family": "typical",
+      "err": 0
+    },
+    {
+      "shape": "64x4096",
+      "family": "outlier_channels",
+      "err": 0.00005918560606060606
+    },
+    {
+      "shape": "64x4096",
+      "family": "tiny_rows",
+      "err": 0
+    },
+    {
+      "shape": "64x4096",
+      "family": "wide_range_signed_w",
+      "err": 0.00007038288288288288
+    },
+    {
+      "shape": "8192x4096",
+      "family": "typical",
+      "err": 0.0022123893805309734
+    },
+    {
+      "shape": "8192x4096",
+      "family": "outlier_channels",
+      "err": 0.00024224806201550387
+    },
+    {
+      "shape": "8192x4096",
+      "family": "tiny_rows",
+      "err": 0.0014792899408284023
+    },
+    {
+      "shape": "8192x4096",
+      "family": "wide_range_signed_w",
+      "err": 0.0002840909090909091
+    }
+  ],
+  "verdict": "pass on all eight checks",
+  "note": "the gate itself also reported precision pass on both shapes in every clean gated window",
+  "status": "decode met (1.3726x / 1.4056x); prefill not met (0.807 / 0.813)"
+}
