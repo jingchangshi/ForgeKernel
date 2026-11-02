@@ -2769,6 +2769,7 @@ def _main(argv: list[str] | None = None) -> int:
             simulator_dir = None
     ref_in_job = _resolve_ref_in_job(cfg, _resolve_ref_spec(cfg))
     ctx = LoopContext(
+        ncu_available=ncu_available(cfg),
         op=args.op, workspace=workspace, milestone=milestone, kb_dir=kb_root,
         status_path=status_path, meta_dir=root / "meta", kernel_file=args.kernel_file,
         meta_status_path=meta_status_path,

@@ -325,6 +325,11 @@ class LoopContext:
     # loop.toml [loop] infeasible_min_diagnoses / --min-meta-before-infeasible.
     infeasible_min_diagnoses: int = 1
     ncu_retries: int = 2  # retry NCU when a passing kernel yields an empty profiler
+    # P6: the machine cannot run NCU ([loop] ncu_available = false, e.g. on the
+    # Ascend NPU). The driver must not submit or retry an ncu job there; the run
+    # degrades to timing only instead of spending a job per iteration on a
+    # profiler that cannot start.
+    ncu_available: bool = True
     # LEVER PRICING ROUND (plateau diagnosis AND the M0 audit). Before the
     # teacher names a cause_class it designs N composable levers on the best tree
     # and the driver prices them in ONE job — base / +each / all / all-each — so
@@ -1751,6 +1756,11 @@ def _ncu_profiler(ctx: LoopContext, branch: str, *, correctness: bool) -> dict:
     yields no NCU legitimately, so it is not retried. Neither is a launch target that
     cannot start on the image (loop/job_env.py): the retry would replay the same
     import error, and the empty digest is the job's blindness, not the kernel's."""
+    if not getattr(ctx, "ncu_available", True):
+        # P6: NCU cannot run here ([loop] ncu_available = false). Do not submit the
+        # job and do not retry: an unavailable profiler is not a kernel reading, and
+        # every retry would be a wasted job.
+        return {}
     mode = _ncu_mode(ctx)
     out = ctx.backend.submit_gpu(branch, mode)
     prof = profiler_from_ncu(_without_census_lines(out))
