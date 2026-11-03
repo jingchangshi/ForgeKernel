@@ -1,0 +1,726 @@
+{
+  "generatedAt": "2026-11-03T04:20:00Z",
+  "scope": "Ascend950PR BF16 RMSNorm, R1-R84, two sessions",
+  "eras": {
+    "A": "R1-R58 DMA/vector-pipeline era",
+    "B": "R59-R80 L2 policy + exhaustive negative results",
+    "C": "R81-R84 launch geometry (this session)"
+  },
+  "roundCount": 39,
+  "ledger": [
+    {
+      "round": 1,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "diagnosis",
+      "topic": "SimdVF reduction and bf16 load resolved by probe",
+      "outcome": "vcadd reduction chain and bf16 UNPK_B16 load verified equal to torch; SimdVF route declared viable",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "bf16_load": "vld(dist=UNPK_B16)+vcvt(part=0) over 64 bf16 == torch exactly",
+        "lanes": "float32 vector = 32 lanes"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/simdvf-r1-reduce-2026-11-02.json",
+        "docs/ascend950pr/evidence/simdvf-feasibility-2026-11-02.json"
+      ]
+    },
+    {
+      "round": 2,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "diagnosis",
+      "topic": "bf16 store, scalar broadcast, rstd chain",
+      "outcome": "all SimdVF API pieces needed by RMSNorm verified individually; no full kernel or timing yet",
+      "claim_strength": "measured-single",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/simdvf-r2-api-2026-11-02.json"
+      ]
+    },
+    {
+      "round": "3-5",
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "kernel-change",
+      "topic": "first end-to-end SimdVF RMSNorm kernel",
+      "outcome": "correct SimdVF kernel exists and beats the SimtVF one, but is ~0.58x of vendor; w preconversion 0.539->0.581x",
+      "claim_strength": "measured-single",
+      "numbers": {
+        "ratio_single_process": 0.581,
+        "prefill_vendor_ms": 0.0514,
+        "prefill_tilelang_ms": 0.1634
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/simdvf-r3-r5-kernel-2026-11-02.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v1/kernel.py"
+    },
+    {
+      "round": 6,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "diagnosis",
+      "topic": "pipe attribution, bf16 vector width, rows sweep",
+      "outcome": "vector-pipe floor identified; rows 1->4 gives real 1.76x but rows=8 does not fit UB",
+      "claim_strength": "measured-single",
+      "numbers": {
+        "vec": 0.7313,
+        "mte2": 0.6493,
+        "mte3": 0.226,
+        "rows1_us": 289,
+        "rows2_us": 189.6,
+        "rows4_us": 164.2,
+        "rows8": "UB overflow 271360B > 256KiB"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/simdvf-r6-pipes-2026-11-02.json"
+      ]
+    },
+    {
+      "round": 7,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "kernel-change",
+      "topic": "decode shape faster than vendor; cube path blocked",
+      "outcome": "decode >1.0 in single-process paired measurement; prefill ~0.62x; nothing witness-audited yet",
+      "claim_strength": "measured-single",
+      "numbers": {
+        "decode_ratio": ">1.0",
+        "prefill_ratio": 0.62
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/simdvf-r7-decode-2026-11-02.json"
+      ]
+    },
+    {
+      "round": 8,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "diagnosis",
+      "topic": "why prefill cannot reach parity (op-count accounting)",
+      "outcome": "~10 vector instructions per 64 elements with no available fusion primitive; concluded scheduling alone cannot close it",
+      "claim_strength": "derived",
+      "numbers": {
+        "vec_instr_per_64_elems": "~10"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/prefill-ceiling-2026-11-02.json"
+      ]
+    },
+    {
+      "round": "9-45",
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "kernel-change",
+      "topic": "kernel iterations v2-v3, structural tuning, pipeline depth, multi-accumulator",
+      "outcome": "v3/v4 candidates built; decode progressed; prefill remained ~0.70-0.76; no candidate certified",
+      "claim_strength": "quoted",
+      "numbers": {},
+      "artifacts": [],
+      "note": "log-only summary; per-round detail not separately archived"
+    },
+    {
+      "round": 47,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "negative-result",
+      "topic": "multi-accumulator candidate; certification structurally blocked",
+      "outcome": "R47 multi-accumulator candidate could not be certified because own ForgeKernel runs occupied the card",
+      "claim_strength": "measured-single",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/accept-r47-structural-r47.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v4/kernel.py"
+    },
+    {
+      "round": 48,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "verification",
+      "topic": "independent acceptance in a genuinely clean window",
+      "outcome": "decode demonstrated faster than vendor under audited protocol; prefill ~0.757 and fails",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "prefill_ratio": 0.757,
+        "decode": "EXCEED"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/accept-clean-r48.json"
+      ]
+    },
+    {
+      "round": 49,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "diagnosis",
+      "topic": "prefill gap analysis: where the remaining 32% sits",
+      "outcome": "no prefill improvement established; ad-hoc sweeps cannot resolve the gap",
+      "claim_strength": "measured-single",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/prefill-gap-r49.json"
+      ]
+    },
+    {
+      "round": 50,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "negative-result",
+      "topic": "deeper pipeline + double-buffered output",
+      "outcome": "structural tuning does not move the gated prefill ratio (~0.75); decode EXCEED stands",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "prefill_ratio": 0.75
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/accept-v3-prefill-r50.json"
+      ]
+    },
+    {
+      "round": 51,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "verification",
+      "topic": "v4 certified EXCEED on decode (single artifact)",
+      "outcome": "decode certified EXCEED 1.2809 [1.2470,1.3087]; prefill 0.757 fails; partition hypothesis untested",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "decode_point": 1.2809,
+        "decode_interval95": [
+          1.247,
+          1.3087
+        ],
+        "decode_candidateMs": 0.002777,
+        "decode_vendorMs": 0.003596,
+        "prefill_ratio": 0.757
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/accept-r51.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v4/kernel.py"
+    },
+    {
+      "round": 52,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "negative-result",
+      "topic": "UB limit is enforced at launch; unlimit annotation does not help",
+      "outcome": "annotate_unlimit_memory does not change the launch-time UB check (286720 B always refused)",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "ub_required_B": 286720,
+        "ub_limit": "256 KiB"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r52-ublimit-and-contention.json"
+      ]
+    },
+    {
+      "round": 53,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "correction",
+      "topic": "gate can report authenticity FAIL when candidate measured nothing",
+      "outcome": "gate bug: no measurement and no observed kernel was judged 'delegates to vendor'; fixed to RETEST",
+      "claim_strength": "measured-paired",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/r53-authenticity-falsepositive.json"
+      ]
+    },
+    {
+      "round": 54,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "correction",
+      "topic": "claimed contiguous-partition gain (+8.9%)",
+      "outcome": "claimed prefill 0.757->0.825 from contiguous per-core partition",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "prefill_claimed": 0.825
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r54-partition-and-gate-fix.json"
+      ],
+      "withdrawn": {
+        "round": 58,
+        "reason": "candidate ms only moved 0.0801->0.0794 (~0.8%, noise); the ratio moved because the VENDOR window drifted 0.0591->0.0645. Claim retracted."
+      }
+    },
+    {
+      "round": 55,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "measurement-methodology",
+      "topic": "environment saturated by other users",
+      "outcome": "nothing new measured; variants queued behind idle-window waits",
+      "claim_strength": "measured-single",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/r55-environment-and-variants.json"
+      ]
+    },
+    {
+      "round": 56,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "verification",
+      "topic": "v5 precision coverage across input families",
+      "outcome": "precision clean on both shapes and all tested families; performance still short on prefill",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "max_ulp": "far below 2^-7"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r56-v5-precision-coverage.json"
+      ]
+    },
+    {
+      "round": 58,
+      "date": "2026-11-02",
+      "era": "A (R1-R58) DMA/vector-pipeline era",
+      "type": "correction",
+      "topic": "CORRECTION: partition change never improved the candidate",
+      "outcome": "R54 claim withdrawn; established the rule that CANDIDATE time is the metric, not the ratio alone",
+      "claim_strength": "measured-paired",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/r58-correction-partition-claim.json",
+        "docs/ascend950pr/evidence/r58-variant-table.json"
+      ]
+    },
+    {
+      "round": 59,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "negative-result",
+      "topic": "two-phase scheduling is unsafe: a genuine race",
+      "outcome": "two-phase shared-buffer kernel has a REAL race: rows=2 wrong at all sizes, batch=128 nondeterministic (5 runs differ, rel=1.0). v10/v11/v13/v14/v14b REJECTED; their 0.0733 ms is not a performance result.",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "invalid_claim_ms": 0.0733
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r59-two-phase-race.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v10/kernel.py"
+    },
+    {
+      "round": "60-61",
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "kernel-change",
+      "topic": "race-free two-phase via source-level unroll with per-row registers",
+      "outcome": "v15 correct and deterministic at all sizes; gated prefill 0.0794->0.0755 ms, first confirmation the two-phase approach works",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "prefill_before_ms": 0.0794,
+        "prefill_after_ms": 0.0755
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r61-v15-gated.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v15/kernel.py"
+    },
+    {
+      "round": 62,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "diagnosis",
+      "topic": "compute has caught up; the bottleneck moved to DMA",
+      "outcome": "vec 41.0 us vs vendor 37.2 us; deeper buffering does not help; parity would need ~30% off candidate at vendor-best",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "vec_us": 41.0,
+        "vendor_vec_us": 37.2,
+        "candidate_ms": "0.0745-0.0755",
+        "vendor_ms": "0.052-0.062"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r62-dma-bound.json"
+      ]
+    },
+    {
+      "round": 63,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "kernel-change",
+      "topic": "v16 single artifact: decode EXCEED, prefill short",
+      "outcome": "v16 certified decode 1.3160x",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "decode_point": 1.316
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r63-v16-dual.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v16/kernel.py"
+    },
+    {
+      "round": 64,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "diagnosis",
+      "topic": "copy-path floor explains the remaining prefill gap",
+      "outcome": "measured copy path ~1.7 TB/s; pure copy of 128 MB needs 0.078 ms; concluded the path had bottomed out",
+      "claim_strength": "measured-single",
+      "numbers": {
+        "copy_TBps": 1.7,
+        "pure_copy_128MB_ms": 0.078
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r64-copy-floor.json"
+      ],
+      "withdrawn": {
+        "round": 65,
+        "reason": "WRONG. The path was not saturated but crippled by an UNSET L2 write policy; an explicit policy lifted write throughput 1.13->3.08 TB/s and the candidate to 0.0648 ms."
+      }
+    },
+    {
+      "round": 65,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "breakthrough",
+      "topic": "L2 cache policy is the decisive knob",
+      "outcome": "explicit write-path NORMAL_FV lifts UB->GM from 1.13 to 3.08 TB/s (2.7x); read peaks 2.35 TB/s; v18 candidate 0.0648 ms, best so far. R64's floor claim withdrawn.",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "write_unset_TBps": 1.138,
+        "write_NORMAL_FV_TBps": 3.079,
+        "write_NORMAL_RED_TBps": 3.089,
+        "read_None_TBps": 2.104,
+        "read_NORMAL_FV_TBps": 2.12,
+        "read_NORMAL_LV_TBps": 2.351,
+        "read_NORMAL_PREF_TBps": 2.139,
+        "read_IDS_FV_TBps": 1.819,
+        "read_EXCLUSIV_FV_TBps": 2.104,
+        "read_NOTALLOC_KEEP_TBps": 0.906,
+        "prefill_gate_v18": 0.772,
+        "candidate_ms": 0.0648
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r65-l2-breakthrough.json",
+        "docs/ascend950pr/evidence/r65-write-path-and-ceiling.json"
+      ]
+    },
+    {
+      "round": 66,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "negative-result",
+      "topic": "microbenchmark ranking does not transfer to the kernel",
+      "outcome": "NORMAL_LV won the read microbenchmark but made the kernel SLOWER; v21 adopted NORMAL_FV on every DMA path",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "read_NORMAL_LV_microbench_TBps": 2.351
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r66-v20-policy-fit.json",
+        "docs/ascend950pr/evidence/r66-v21-best.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v21/kernel.py"
+    },
+    {
+      "round": 67,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "kernel-change",
+      "topic": "v23 is the best artifact on both shapes",
+      "outcome": "v23 (stages=4 + NORMAL_FV everywhere) decode 1.3726 [1.3561,1.3829]; prefill 0.8074 [0.8006,0.8343] FAIL; more output buffering hurts",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "decode_point": 1.3726,
+        "decode_interval95": [
+          1.35605407,
+          1.382943461
+        ],
+        "decode_candidateMs": 0.00264,
+        "prefill_point": 0.807361385,
+        "prefill_interval95": [
+          0.800627872,
+          0.834272457
+        ],
+        "prefill_candidateMs": 0.065149,
+        "prefill_vendorMs": 0.052974
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r67-v23-best.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v23/kernel.py"
+    },
+    {
+      "round": "68-70",
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "negative-result",
+      "topic": "systematic negation of the remaining lever space",
+      "outcome": "rows=2, rows=8, stages=5/6, 8 accumulation chains, y triple-buffering, heterogeneous read/write L2 policies, manual pipeline order/stage lists: NONE beats v23",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "v28_8chains_ms": 0.072535,
+        "v23_4chains_ms": 0.065149,
+        "v28_slowdown": "~12%"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r68-no-better-variant.json",
+        "docs/ascend950pr/evidence/r69-decode-repeat.json",
+        "docs/ascend950pr/evidence/r70-manual-pipeline.json"
+      ]
+    },
+    {
+      "round": 71,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "verification",
+      "topic": "v23 precision across four input families on both shapes",
+      "outcome": "precision pass; decode 1.3726/1.4056; prefill 0.807/0.813",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "decode": "1.3726, 1.4056",
+        "prefill": "0.807, 0.813"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r71-v23-input-families.json"
+      ]
+    },
+    {
+      "round": 72,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "verification",
+      "topic": "archive reproduces from a fresh empty cache",
+      "outcome": "decode reproduces 1.3550x from a cold cache; bigger DMA chunks useless once L2 policy is set (32 KB=1.757 TB/s, 64 KB=1.725 TB/s)",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "decode_cold_cache": 1.355,
+        "chunk32_TBps": 1.757,
+        "chunk64_TBps": 1.725
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r72-repro-and-chunk-limit.json"
+      ]
+    },
+    {
+      "round": 73,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "diagnosis",
+      "topic": "residual gap is MIXED-traffic efficiency",
+      "outcome": "isolated read 2.35 / write 3.08 TB/s but mixed only 1.76; our kernel 1.97 vs vendor 2.42 TB/s, matching the ~20% time gap. TileLang exposes no DRAM page-locality or stream-count control.",
+      "claim_strength": "measured-single",
+      "numbers": {
+        "isolated_read_TBps": 2.35,
+        "isolated_write_TBps": 3.08,
+        "copy_mixed_TBps": 1.76,
+        "our_mixed_TBps": 1.97,
+        "vendor_mixed_TBps": 2.42,
+        "vendor_advantage_pct": 23
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r73-mixed-traffic.json"
+      ]
+    },
+    {
+      "round": 74,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "correction",
+      "topic": "CORRECTION: for prefill the RATIO is the stable quantity",
+      "outcome": "absolute prefill times drift +/-20% between windows; only the paired ratio is stable (0.771-0.813). Sharpened the rule: a single-window improvement under 20% is not evidence.",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "abs_drift_pct": 20,
+        "stable_ratio_range": [
+          0.771,
+          0.813
+        ]
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r74-variance-correction.json"
+      ]
+    },
+    {
+      "round": 76,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "verification",
+      "topic": "documentation-to-evidence audit",
+      "outcome": "5 documentation numbers audited against raw evidence, all exactly consistent; manifest hashes regenerated",
+      "claim_strength": "measured-paired",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/r76-audit.json"
+      ]
+    },
+    {
+      "round": 77,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "verification",
+      "topic": "fourth independent prefill window: best ratio still 0.85",
+      "outcome": "fourth clean window gives 0.8502 [0.8294,0.8830] - the best of four and still FAIL",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "point": 0.850226523,
+        "interval95": [
+          0.829377796,
+          0.882975699
+        ],
+        "candidateMs": 0.076078,
+        "vendorMs": 0.064622,
+        "all_four": [
+          0.807361385,
+          0.81331163,
+          0.771066795,
+          0.850226523
+        ]
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r77-fourth-window.json"
+      ]
+    },
+    {
+      "round": 79,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "verification",
+      "topic": "pre-delivery verification in a fresh process",
+      "outcome": "shipped v23 reproduces correctly and deterministically; objective not achieved",
+      "claim_strength": "measured-paired",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/r79-final-verification.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v23/kernel.py"
+    },
+    {
+      "round": 80,
+      "date": "2026-11-02",
+      "era": "B (R59-R78) L2 policy + negative results",
+      "type": "archival",
+      "topic": "closing record at the round budget (80/80)",
+      "outcome": "decode EXCEED on 3 windows; prefill FAIL on 4 windows (0.771-0.850); objective_met=false; lever list declared exhausted",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "decode_points": [
+          1.372594123,
+          1.405644741,
+          1.354979381
+        ],
+        "decode_lower_bounds": [
+          1.35605407,
+          1.378313143,
+          1.336322032
+        ],
+        "prefill_points": [
+          0.807361385,
+          0.81331163,
+          0.771066795,
+          0.850226523
+        ],
+        "best_lower_bound": 0.829377796,
+        "slowdown": "15-23%"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r80-closing-record.json"
+      ],
+      "withdrawn": {
+        "round": 84,
+        "reason": "Declared the lever space exhausted, but had never varied the grid size (all candidates used 64 blocks on a 56-core chip) nor tested the read-path NOTALLOC_CLEAN policy. Both were reachable at any time."
+      }
+    },
+    {
+      "round": 81,
+      "date": "2026-11-03",
+      "era": "C (R81-R84) launch geometry",
+      "type": "diagnosis",
+      "topic": "msprof op simulator feasibility on a minimal v23 model",
+      "outcome": "simulator exists and runs; usable as a model, trustworthiness of per-pipe numbers unestablished",
+      "claim_strength": "measured-paired",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/r81-simulator-feasibility.json"
+      ]
+    },
+    {
+      "round": 82,
+      "date": "2026-11-03",
+      "era": "C (R81-R84) launch geometry",
+      "type": "correction",
+      "topic": "SIMT-looking mnemonics are the model naming convention",
+      "outcome": "corrected the earlier misreading that SIMT_LDK/SIMT_STG/SIMT_FFMA implied a compiler fallback to a SIMT path",
+      "claim_strength": "measured-paired",
+      "numbers": {},
+      "artifacts": [
+        "docs/ascend950pr/evidence/r82-sim-correction.json"
+      ]
+    },
+    {
+      "round": 83,
+      "date": "2026-11-03",
+      "era": "C (R81-R84) launch geometry",
+      "type": "negative-result",
+      "topic": "simulator cannot discriminate 12% kernel differences",
+      "outcome": "v23 vs v28 are BIT-IDENTICAL in simulation (total_tick 43686 vs 43804; both 338639 cycles, 13925 executed) while differing 12% on hardware. No offline oracle is available; only the device can settle a 12% question.",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "v23_sim_tick": 43686,
+        "v28_sim_tick": 43804,
+        "sim_cycles": 338639,
+        "sim_executed": 13925,
+        "v23_device_ms": 0.065149,
+        "v28_device_ms": 0.072535,
+        "device_difference": "v28 ~12% slower"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/r83-simulator-not-discriminating.json"
+      ]
+    },
+    {
+      "round": 84,
+      "date": "2026-11-03",
+      "era": "C (R81-R84) launch geometry",
+      "type": "breakthrough",
+      "topic": "56 blocks (not 64) + NOTALLOC_CLEAN read path",
+      "outcome": "Two independent host-side changes flip prefill from FAIL to EXCEED. (1) grid 64 -> 56: the chip has 56 AIV cores, so 64 blocks costs a second near-empty wave. (2) read path NORMAL_FV -> NOTALLOC_CLEAN: our 128 MB footprint exactly fills the 128 MB L2, so the allocating read policy forced dirty-Y write-backs into the read stream. Kernel body is byte-identical to v23.",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "prefill_point": 1.188262482,
+        "prefill_interval95": [
+          1.18328202,
+          1.193268213
+        ],
+        "prefill_pairs": 60,
+        "prefill_quiet": "60/60",
+        "decode_point": 1.714427758,
+        "decode_interval95": [
+          1.669916832,
+          1.744774284
+        ],
+        "decode_pairs": 80,
+        "decode_quiet": "76/80",
+        "precision": "6/6 pass",
+        "core_step_probe": "flat 1->56, +82% at 57",
+        "sweep_grid56_us": 187.2,
+        "sweep_grid64_us": 260.0,
+        "prefill_45pair_point": 1.242530549,
+        "prefill_45pair_interval95": [
+          1.218796764,
+          1.264165414
+        ],
+        "prefill_45pair_quiet": "42/45"
+      },
+      "artifacts": [
+        "docs/ascend950pr/evidence/accept-rmsnorm-v33-prefill-60pair-2026-11-03.json",
+        "docs/ascend950pr/evidence/accept-rmsnorm-v33-decode-80pair-2026-11-03.json",
+        "docs/ascend950pr/evidence/accept-rmsnorm-v33-45pair-2026-11-03.json",
+        "docs/ascend950pr/evidence/accept-rmsnorm-v33-30pair-2026-11-03.json",
+        "docs/ascend950pr/evidence/accept-rmsnorm-v33-12pair-2026-11-03.json"
+      ],
+      "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v33/kernel.py"
+    }
+  ],
+  "note": "Era boundary note: R79/R80 are the closing of the Era-B program and are grouped with it; Era C begins at R81 in the current session. Dates for R81-R83 were corrected from 2026-11-02 to 2026-11-03 to match their artifacts."
+}
