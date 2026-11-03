@@ -4,9 +4,10 @@
   "eras": {
     "A": "R1-R58 DMA/vector-pipeline era",
     "B": "R59-R80 L2 policy + exhaustive negative results",
-    "C": "R81-R84 launch geometry (this session)"
+    "C": "R81-R84 launch geometry (this session)",
+    "D": "R85 v34 — vcadd chain collapse (this session)"
   },
-  "roundCount": 39,
+  "roundCount": 40,
   "ledger": [
     {
       "round": 1,
@@ -720,7 +721,41 @@
         "docs/ascend950pr/evidence/accept-rmsnorm-v33-12pair-2026-11-03.json"
       ],
       "candidate": "docs/ascend950pr/candidates/rmsnorm_simdvf_v33/kernel.py"
+    },
+    {
+      "round": "R85",
+      "date": "2026-11-03",
+      "era": "D (this session) v34 — vcadd chain collapse",
+      "type": "kernel-change",
+      "topic": "collapse the five 6-call vcadd chains to one call each (30 -> 5 vcadd)",
+      "outcome": "T.simd.vcadd is a FULL reduction into lane 0 (measured: ones -> 64.0 at lane 0, one non-zero lane; ramp 0..63 -> 2016.0 = sum). It is idempotent under MODE_ZEROING, so calls 2..6 re-sum {total,0,...,0} and change nothing. Collapsing all 5 chains is BIT-IDENTICAL on both shapes (max_abs 0.0, 0 mismatches). Paired A/B: prefill +0.66% [1.0053,1.0093] 24/24; decode +0.60% [1.0029,1.0146] 18/24. Root cause is an upstream docstring error at simd.py:957 (calls vcadd a pairwise reduction; the pairwise op is vcpadd).",
+      "claim_strength": "measured-paired",
+      "numbers": {
+        "vcadd_calls": "30 -> 5",
+        "prefill_bit_identical": "max_abs 0.0 over 33,554,432 bf16 elements",
+        "decode_bit_identical": "max_abs 0.0",
+        "prefill_ratio": "1.0066 [1.0053,1.0093], 24/24 pairs",
+        "decode_ratio": "1.0060 [1.0029,1.0146], 18/24 pairs",
+        "precision": "rel_l2 identical to v33 on 8192x4096 / 64x4096 / 256x4096 (1.659e-3 / 1.658e-3 / 1.657e-3)"
+      },
+      "artifacts": [
+        "docs/ascend950pr/candidates/rmsnorm_simdvf_v34/kernel.py",
+        "docs/ascend950pr/candidates/rmsnorm_simdvf_v34/NOTES.md",
+        "docs/ascend950pr/evidence/vcadd-semantics-probe.md",
+        "docs/ascend950pr/probes/vcadd_semantics_probe.py",
+        "docs/ascend950pr/probes/vcadd_chain_collapse_check.py",
+        "docs/ascend950pr/probes/vcadd_chain_paired_timing.py",
+        "docs/ascend950pr/probes/v34_vs_v33.py",
+        "docs/ascend950pr/probes/v34_precision.py"
+      ]
     }
   ],
-  "note": "Era boundary note: R79/R80 are the closing of the Era-B program and are grouped with it; Era C begins at R81 in the current session. Dates for R81-R83 were corrected from 2026-11-02 to 2026-11-03 to match their artifacts."
+  "note": "Era boundary note: R79/R80 are the closing of the Era-B program and are grouped with it; Era C begins at R81 in the current session. Dates for R81-R83 were corrected from 2026-11-02 to 2026-11-03 to match their artifacts.",
+  "discrepancies": [
+    {
+      "round": "R1",
+      "field": "numbers.lanes",
+      "issue": "R1 'numbers.lanes' says 'float32 vector = 32 lanes'. Re-measured on device 1 (this session): the vector register is 256 bytes / 2048 bits, so float32 is 64 lanes, and vcpadd over 64 lanes of 1.0 returns 2.0 in 32 lanes (pairwise halves 64 -> 32), which is only consistent with a 64-lane input. The '32' looks like a 256-byte/8 or bit/byte confusion. Left as a flagged discrepancy rather than silently edited; see evidence/vcadd-semantics-probe.md."
+    }
+  ]
 }
