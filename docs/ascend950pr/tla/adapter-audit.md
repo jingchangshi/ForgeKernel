@@ -143,6 +143,8 @@ README 给了一个具体的两轮对照 [verified: README.md:139-158]：
 | triton_ascend-3.6.0.dev20261030+git0c9d99ca | **可用**：跑到 CAST_BACK OK / TRITON_CAST_BACK OK，零 mismatch |
 
 > **⚠️ 更正（2026-11-03，task-12）：本节初版结论"本机一个都没有"是错的。**
+> **这个前提是本文件作者（lead）自己写下的**——它并非由 task-10/12 的执行者引入；
+> 对方是照抄了 lead 的简报。证伪同样来自 lead 自己的门实测（§下）。
 > 真的部分是：磁盘上那 6 个 triton_ascend **wheel 文件**（/home/s00653124/Packages/ 与 /data/pri 下）
 > 的 `language/extra/tla/` **均为 0 文件**；默认环境 s00653124_tilelang 的 `language/extra/` 只有
 > `cann, cuda, hip, kernels, libdevice.py` [verified，我复核]。
@@ -153,6 +155,7 @@ README 给了一个具体的两轮对照 [verified: README.md:139-158]：
 > 含 **21 个 tla .py**、RECORD **43** 条；`tla.jit` / `tla.dma` / `tla.annotate_buffer_versions` 均存在；
 > **门实测 PASS**（run `9e8c59f1c356badc32a0e0d396af4659`，11/11，`Ascend950PR_9579`，12.45 s）。
 > 运行路径见 [`how-to-run.md`](how-to-run.md)。
+> **可复现：** `python3 docs/ascend950pr/tla/probes/verify-tla-runnable.py`（十项前提全过才 exit 0）。
 >
 > 所以"PASS 不可复现"这句要撤回：**它可以复现，而且已经复现过。**
 > 仍成立的是：**它证明的是"这台机器能跑 TLA"，不是"我们的内核已被验收"**（§3）。

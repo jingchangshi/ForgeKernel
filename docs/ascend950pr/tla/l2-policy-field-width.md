@@ -160,6 +160,10 @@ CANN C-API：`asc_copy_gm2ub_align(..., static_cast<asc_load_l2_cache_mode>(arg8
   含 21 个 tla .py，**可导入、可编译、可在 NPU 上执行**，tla-npu 门实测 **PASS**
   （run `9e8c59f1c356badc32a0e0d396af4659`）。见 [`how-to-run.md`](how-to-run.md)。
   **所以"没有人跑过 TLA"这句要收窄成："没有人跑过我们的 rmsnorm 内核的 TLA 版。"**
+- **可复现：** `python3 docs/ascend950pr/tla/probes/verify-tla-runnable.py` 一条命令核对上述全部前提，
+  并**断言本文 §2.3 的 L2 结论仍然成立**（`LoadGM2UBParams` 无 `l2_cache_ctrl`、
+  `LoadGM2L1Params` 有、`EvictionPolicy` 无 NOTALLOC）。若这些字段变了，该脚本会 fail 并提示
+  本文需要重新审视。**这是为本文留的自动化守卫。**
 - **本文的 L2 结论未因此改变。** 我按 lead 的要求，把 §2.3 的字段核对**从已安装 wheel 重做了一遍**
   （`$CONDA_ENVS/s00653124_tla/.../extra/tla/dma.py`，非源码树）：`LoadGM2UBParams` 字段仍是
   `[pad_mode, pad_value, left_padding_num, right_padding_num, eviction_policy]`，**无 `l2_cache_ctrl`**；

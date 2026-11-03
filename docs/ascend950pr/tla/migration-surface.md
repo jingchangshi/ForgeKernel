@@ -15,6 +15,8 @@
 > 细节见 [`README.md`](README.md) §2。
 > 仍成立的是：**我们的 rmsnorm 内核从未以 TLA 编译过**——这是另一件事。
 >
+> **可复现的证伪：** `python3 docs/ascend950pr/tla/probes/verify-tla-runnable.py`（十项前提全过才 exit 0）。
+>
 > **因此"从 TileLang 迁到 TLA"是 DSL 家族的更换**（TileLang → Triton + `tla.*` 命名空间），
 > 不是同族版本升级。TLA 自己的 `__init__.py` 说得很清楚：
 > "Independent `tla.*` programming namespace for Ascend NPU kernels … It does **not** reuse the existing
