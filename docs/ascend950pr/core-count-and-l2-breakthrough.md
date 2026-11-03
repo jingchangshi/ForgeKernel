@@ -473,7 +473,7 @@ Open items, in order of what would change a conclusion:
 
 1. ~~Archive the gate reports under `evidence/` with hashes and add them to the manifest~~ - **done**:
    all **five** reports are in `docs/ascend950pr/evidence/` as `accept-rmsnorm-v33-*`, sha256-identical
-   to their `/tmp` sources, and listed in `archive-manifest.json` (round 84, 29 artifacts, 29/29
+   to their `/tmp` sources, and listed in `archive-manifest.json` (round 84, 31 artifacts, 31/31
    hashes verified). The formal EXCEED now rests on in-tree artifacts.
 2. ~~A prefill run with more pairs on a quiet card~~ - **done**: the 60-pair, 60/60-quiet run is the
    headline in §4.1. Both shapes now have a full interval whose lower bound clears 1.0 (prefill 1.1833,

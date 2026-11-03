@@ -784,7 +784,7 @@ v23 → v33 的 diff 只有四处，**本文直接从两份源码核对过**（�
 - `pitfalls.md` — 实施风险与验收登记表。
 - `devkit-lessons-reg-compute.md` — `02_reg_compute` 研究；§0 结论为"对内核级改动已穷尽"。
 - `devkit-lessons-memory.md` — `04_memory_access` 研究；§2.4 记录"只有 4/12 load、3/9 store 策略被门控过"。
-- `archive-manifest.json` — 29 件 artifact 的 sha256 清单（第 84 轮，候选 v33）。
+- `archive-manifest.json` — 31 件 artifact 的 sha256 清单（第 84 轮，候选 v33）。
 
 ### 10.4 候选
 
