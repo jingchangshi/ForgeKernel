@@ -142,13 +142,20 @@ README 给了一个具体的两轮对照 [verified: README.md:139-158]：
 | triton_ascend-3.6.0.post20261030+gita414a5cb | **不可用**：无 tla.jit（@tla.jit 立即 AttributeError）；native library 只导出 34 个 create_tla_* / create_simd_* 中的 **9 个**，把 tla.jit 别名到 triton.jit 只会把失败推进 native 层（no attribute 'create_tla_alloc'）。**不可通过 shim 或换 wheel 配对救活** |
 | triton_ascend-3.6.0.dev20261030+git0c9d99ca | **可用**：跑到 CAST_BACK OK / TRITON_CAST_BACK OK，零 mismatch |
 
-**而本机一个都没有。** 逐个解压 6 个 triton_ascend wheel（/home/s00653124/Packages/ 与
-/data/pri 下），language/extra/tla/ **均为 0 文件**；已装环境 s00653124_tilelang（triton 3.6.0）的
-language/extra/ 只有 cann, cuda, hip, kernels, libdevice.py
-[verified：unzip -l 逐个计数 + ls 已装目录]。
-
-TLA 首次提交是 **2026-10-24**，晚于本机所有 wheel（最早 2026-08-01）——
-**所以这是"没有构建"，不是"路径错"**。README 钉的那个可用的 dev20261030 在本机不存在。
+> **⚠️ 更正（2026-11-03，task-12）：本节初版结论"本机一个都没有"是错的。**
+> 真的部分是：磁盘上那 6 个 triton_ascend **wheel 文件**（/home/s00653124/Packages/ 与 /data/pri 下）
+> 的 `language/extra/tla/` **均为 0 文件**；默认环境 s00653124_tilelang 的 `language/extra/` 只有
+> `cann, cuda, hip, kernels, libdevice.py` [verified，我复核]。
+> **但那答的是"wheel 文件里有没有"，不是"本机有没有能用的"。**
+>
+> **本机真正可用的是 `/home/s00653124/.conda/envs/s00653124_tla`**，装的是
+> `triton_ascend-3.6.0.dev20261101+git2a00c605`（既非上表两个 wheel 中的任何一个），
+> 含 **21 个 tla .py**、RECORD **43** 条；`tla.jit` / `tla.dma` / `tla.annotate_buffer_versions` 均存在；
+> **门实测 PASS**（run `9e8c59f1c356badc32a0e0d396af4659`，11/11，`Ascend950PR_9579`，12.45 s）。
+> 运行路径见 [`how-to-run.md`](how-to-run.md)。
+>
+> 所以"PASS 不可复现"这句要撤回：**它可以复现，而且已经复现过。**
+> 仍成立的是：**它证明的是"这台机器能跑 TLA"，不是"我们的内核已被验收"**（§3）。
 
 ---
 
@@ -192,7 +199,8 @@ agent_gates/adapters/ 下有 5 个：
 ## 9. 对迁移决策的三条净结论
 
 1. **它不能当验收门用**，今天门的是一个固定文件（§3）。改造是改契约，不是加开关。
-2. **它证明的那件事本机做不了**（§6）：没有含 tla 的 wheel，这道门的 PASS 目前不可复现。
+2. **它证明的那件事本机已经做到了**（§6 更正）：**PASS 可复现，且有回执。**
+   但它证明的是"TLA 能在本机编译并正确执行"，**不是**"我们的内核已被验收"。
 3. **它的纪律可以照搬**（§4、§8）："记录而不门控"、"缺失即假"、"不断言 by-construction 的值"
    ——这三条在新路径上应原样继承，而不是重新发明。
 

@@ -152,10 +152,19 @@ CANN C-API：`asc_copy_gm2ub_align(..., static_cast<asc_load_l2_cache_mode>(arg8
 
 ## 5. 本文没有证明的
 
-- 没有在设备上跑过任何 TLA 代码。本机**没有**任何 wheel 含 `tla`（6 个 triton_ascend wheel 全查过，
-  `language/extra/tla/` 均为 0 文件）；`tla` 仅以源码存在于
-  `/home/s00653124/workspace/triton-ascend/third_party/ascend/language/tla/`（19 个 .py，3977 行）。
-  **"TLA 在本机不可安装"本身是一个决策相关事实。**
+- **⚠️ 更正（2026-11-03，task-12）**：本节初版说"本机没有任何 wheel 含 `tla`"并据此称
+  "TLA 在本机不可安装"。**那个结论是错的。** 真的部分是：默认的 `s00653124_tilelang` 环境没有 `tla`，
+  磁盘上那 6 个 wheel 文件的 `language/extra/tla/` 均为 0 文件 [verified，我复核]。
+  但那答的是"wheel 文件里有没有"，不是"本机有没有能用的"。**本机另有
+  `/home/s00653124/.conda/envs/s00653124_tla`**，装 `triton_ascend-3.6.0.dev20261101+git2a00c605`，
+  含 21 个 tla .py，**可导入、可编译、可在 NPU 上执行**，tla-npu 门实测 **PASS**
+  （run `9e8c59f1c356badc32a0e0d396af4659`）。见 [`how-to-run.md`](how-to-run.md)。
+  **所以"没有人跑过 TLA"这句要收窄成："没有人跑过我们的 rmsnorm 内核的 TLA 版。"**
+- **本文的 L2 结论未因此改变。** 我按 lead 的要求，把 §2.3 的字段核对**从已安装 wheel 重做了一遍**
+  （`$CONDA_ENVS/s00653124_tla/.../extra/tla/dma.py`，非源码树）：`LoadGM2UBParams` 字段仍是
+  `[pad_mode, pad_value, left_padding_num, right_padding_num, eviction_policy]`，**无 `l2_cache_ctrl`**；
+  `LoadGM2L1Params.l2_cache_ctrl` 仍在（Cube GM→L1）；`EvictionPolicy` 仍是
+  `[EvictNormal, EvictFirst, EvictLast]`，**无任何 NOTALLOC 值**。**字节 5 依旧无处安放。**
 - 没有验证 `EvictFirst` 的实际带宽效果（§4 第 2 点的实验未做）。
 - 没有核 `StoreUB2GMParams` 之外是否还有别的写策略通路（§4 第 3 点）。
 - 没有评估 `LoadGM2L1Params.l2_cache_ctrl` 能否被"借用"到向量路径——从 §2.3 的五层看不像，
@@ -175,6 +184,11 @@ sed -n '39p' /home/s00653124/workspace/triton-ascend/third_party/ascend/AscendNP
 sed -n '144p' /home/s00653124/workspace/triton-ascend/third_party/ascend/AscendNPU-IR/bishengir/lib/Template/lib/RegBase/Vector/Copy3D.cpp
 # 厂商文档原话
 sed -n '381,387p' /home/s00653124/workspace/triton-ascend/third_party/ascend/AscendNPU-IR/bishengir/include/bishengir/Dialect/HIVM/IR/HIVMDMAOps.td
-# 本机没有可安装的 tla
+# 磁盘 wheel 文件里有没有 tla（初版把它误当成"本机有没有可用的"）
 for w in $(find /home/s00653124 /data/pri -name "triton_ascend*.whl"); do echo -n "$w "; unzip -l "$w" | grep -c "extra/tla/"; done
+# 本机真正可用的 TLA 在专用 conda 环境里（这才是干净的检查）
+ls /home/s00653124/.conda/envs/s00653124_tla/lib/python3.11/site-packages/triton/language/extra/tla/*.py | wc -l
+# 从【已安装 wheel】核对 L2 字段（不是源码树）
+E=/home/s00653124/.conda/envs/s00653124_tla/lib/python3.11/site-packages/triton/language/extra/tla
+sed -n '134,146p' $E/dma.py; grep -n "l2_cache_ctrl" $E/dma.py; sed -n '21,24p' $E/dma.py
 ```

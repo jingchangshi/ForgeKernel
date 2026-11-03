@@ -5,11 +5,15 @@
 
 标签沿用全项目约定：**[verified: 路径:行]** / **[source-only]** / **[inferred]** / **[unknown]**。
 
-> **本机没有可安装的 TLA。** 六个 `triton_ascend` wheel 全部查过，`language/extra/tla/` 均为 0 文件；
-> 已装环境（triton 3.6.0）的 `language/extra/` 只有 `cann, cuda, hip, kernels, libdevice.py`
-> [verified: `ls ~/.conda/envs/s00653124_tilelang/lib/python3.11/site-packages/triton/language/extra/`]。
-> `tla` 仅以源码存在于 `/home/s00653124/workspace/triton-ascend/third_party/ascend/language/tla/`
-> （19 个 .py，3977 行）。**"迁移到 TLA 目前没有可安装产物"本身是一个决策相关事实，不是执行障碍。**
+> **⚠️ 更正（2026-11-03，task-12）：本节初版称"本机没有可安装的 TLA"，该结论是错的。**
+> 准确的表述是：**默认的 tilelang 环境**（`s00653124_tilelang`）里没有 `tla`——那 6 个 wheel 文件
+> 与 `ls` 的结果都是真的 [verified]，但它们答的是"磁盘上的 wheel 文件里有没有"，
+> 不是"本机有没有能用的"。**本机另有专用 conda 环境 `s00653124_tla`**，
+> 装有 `triton_ascend-3.6.0.dev20261101+git2a00c605`（21 个 tla .py，RECORD 43 条），
+> 可导入、可编译、可在 NPU 上执行，**tla-npu 门已实测 PASS**
+> （run `9e8c59f1c356badc32a0e0d396af4659`，11/11）。运行路径见 [`how-to-run.md`](how-to-run.md)，
+> 细节见 [`README.md`](README.md) §2。
+> 仍成立的是：**我们的 rmsnorm 内核从未以 TLA 编译过**——这是另一件事。
 >
 > **因此"从 TileLang 迁到 TLA"是 DSL 家族的更换**（TileLang → Triton + `tla.*` 命名空间），
 > 不是同族版本升级。TLA 自己的 `__init__.py` 说得很清楚：
@@ -262,7 +266,7 @@ def get_msprof_cache_flush_kernel(...):
 - **注册面（MUST，1–6 项）**：**约 71–108 行，6 个文件。区间而非单点**：下界是"照抄现有 cuda/tilelang 分支"的机械量；
   上界含 `dsl_source` 的探针逻辑（`:62-190` 约 130 行是探针模板，新写一份可复用大部分）。
 - **保守起见把 MUST 说成"6 文件 / 100 行以内（±30%）"**，而不是"大约 90 行"。
-- **[unknown]** 5.2 第 10、11 项无法估：TLA 在本机不可安装，无法测一次编译/运行，
+- **[unknown]** 5.2 第 10、11 项无法估：**我们的内核**还没有 TLA 版，没测过一次编译/运行，
   也就无法知道 TLA 版的真实工作量。**任何把"迁移成本"当作注册面的说法都低估了它。**
 
 ---
@@ -305,7 +309,7 @@ def get_msprof_cache_flush_kernel(...):
 `EvictFirst` 是否可作为 `NOTALLOC_CLEAN` 的功能替代，只能实测：
 128 MB 工作集撞 128 MB L2 的 prefill 窗口，`EvictFirst` vs 硬件默认，看能否复现 ~1.10×。
 
-**该实验：NOT DONE。** 理由不是时间，是**本机没有可安装的 TLA**
+**该实验：NOT DONE。** 理由不是时间，也不是"TLA 不可用"（它可用，见文首更正），而是：**该窄策略在源码结构上就不存在可测的替代量**，加上我们的内核没有 TLA 版可跑
 （§0 已证）。没有 `tla` 就无法编译该内核，无法在设备上跑。**本文不模拟、不外推。**
 
 厂商文档 §3 那句 "no eviction *priority* can express that" 直接否定这个等价
@@ -334,7 +338,8 @@ def get_msprof_cache_flush_kernel(...):
 1. **这是 DSL 家族更换，不是版本升级。** TileLang → Triton + `tla.*`。
    TLA 自述"does not reuse the existing `al`/`bl` general interfaces (different programming paradigm)"
    [verified: `tla/__init__.py:23-25`]。
-2. **本机没有可安装的 TLA。** 只有源码树（19 .py / 3977 行）。走通第一步就需要一个带 `tla` 的 wheel。
+2. **TLA 已在本机可用**（专用 conda env + 容器 root，门已 PASS）[更正：初版此处说"没有可安装的 TLA"，是错的]。
+   但**我们的内核没有 TLA 版**，所以"能不能迁"仍然未知。
 3. **迁移会确定性地丢掉 1.103×**，除非 §6.3 的实验翻案；而厂商文档已经用同义措辞说明
    "任何逐出优先级都表达不了不分配"。**注册面很小（6 文件 / 约 100 行），
    但注册面不是迁移成本的主要部分**——`fk_dev` 的 NPU 计时基和内核重写才是。

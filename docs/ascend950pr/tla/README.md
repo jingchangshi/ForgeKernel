@@ -29,8 +29,13 @@
 **建议选 D（STAGED）。** 理由不是 TLA 不好，而是：**C（直接迁移 rmsnorm）会拿我们唯一一个已认证的
 性能结论去换一个尚未测过的实现**。
 
-**先读这一句，它约束全文：本机没有可安装的 TLA，所以本文所有关于 TLA 能力的陈述都是
-[source-only]，不是实测——没有人在本卡上跑过 TLA。**
+**先读这一句，它约束全文。** TLA **本身**在本机是可用的，而且已经在设备上跑通过：
+专用 conda 环境 `s00653124_tla` 装有 `triton_ascend-3.6.0.dev20261101+git2a00c605`，
+tla-npu 门实测 **PASS**（run `9e8c59f1c356badc32a0e0d396af4659`）。
+
+**但有一条仍然一次都没发生：我们的 rmsnorm 内核从未以 TLA 编译或执行过。**
+所以本文里凡是对 *v33 迁移到 TLA 之后* 的行为判断，仍然是 [source-only]；
+凡是"TLA 能不能跑"，现在有实测支撑。**这两件事必须分开读**（详见 §2 的更正说明）。
 
 C 的代价要分两层写，混在一起会把它写轻：
 
@@ -41,14 +46,14 @@ C 的代价要分两层写，混在一起会把它写轻：
 
 **1.0170 是损失的地板，不是迁移的期望值。** 把它当作 C 的代价会让 **C 显得比实际更好**——
 因为它假设了一次"除 L2 外完美移植"，而这正是我们**无法证明**的部分（§2、§7）。
-另外它是 [inferred] 映射：1.0170 实测于 TileLang，不是 TLA；TLA 在本机跑不起来，没人测过 TLA 版。
+另外它是 [inferred] 映射：1.0170 实测于 TileLang，不是 TLA；**我们的内核没有 TLA 版实测**
+（注意：不是"TLA 跑不起来"——TLA 本身在本机可用且门已 PASS，见 §2；是我们的内核没试过）。
 
-**D 也不是免费的，这一点必须说清楚。** D 的第一步（让一个含 `tla` 的 wheel 存在）**是 B/C/D 三个
-选项共同的前置条件**，这是它的结构优势；但按本文 §2，这一步需要**厂商构建，或在本机自行编译
-整个 `triton-ascend`**，两者都不在当前范围内。**所以 D 是一个"以该工作获得授权为前提"的建议**——
-本文件不能自己解除那个前提。谁来做这件事需要在 D 被采纳时一并指定。
+**D 比初版所述更便宜，因为它的第一步已经完成了。** 初版说 D 的第一步需要厂商构建或本地全量编译；
+**那个前提是错的**——可用的 TLA 已经装在本机（§2）。所以 D 现在可以直接从"写那个便宜内核"开始。
 
-**TLA 不是坏东西，本机今天也不是能用的东西。** 这两句都要说，且都不等同于对方。
+**TLA 不是坏东西，而且它在本机是可用的。** 这两句都要说：一份把 TLA 说成不可用的评估是错的，
+而一份把"TLA 可用"当成"我们的内核已经能用 TLA"的评估同样错。
 
 ---
 
@@ -75,32 +80,76 @@ C 的代价要分两层写，混在一起会把它写轻：
 
 ---
 
-## 2. 本机没有可安装的 TLA
+## 2. 我查了什么、漏了什么：本机**有**可用的 TLA
 
-这不是"配置错了"，是**缺一个构建产物**。
+> **⛔ 本节是对一个错误前提的更正。**
+> 初版 §2 的标题是"本机没有可安装的 TLA"，**该结论是错的**。按本项目惯例，
+> 错误保留可见而不是静默改写，所以下面同时写"我当时查了什么"和"我漏了什么"。
+>
+> **错误的来源要说准，因为它决定读者该信谁：**这个前提**由 lead 在给本文的简报里给出**，
+> 本文正确地照抄了它。真正的证伪也不是靠推理，而是 lead 后来把 tla-npu 门实际跑到
+> **PASS**（run `9e8c59f1c356badc32a0e0d396af4659`）才暴露的。
+> 所以本文的责任是"未独立复核上游给的前提"，不是"编造了一个结论"——
+> 这仍是值得记下的失误（"不可安装"这么强的断言，本就该查环境而不只查产物），
+> 但它不是本文独有的。
 
-| 检查 | 结果 |
+### 2.1 我当时查的（这些子结论本身仍然成立）
+
+| 检查 | 结果 | 仍然成立？ |
+|---|---|---|
+| **默认 tilelang 环境** `s00653124_tilelang` 的 `triton` | `3.6.0+dev20260816011301`（2026-08-16） | ✅ |
+| 在该环境 `from triton.language.extra import tla` | **ImportError** [measured] | ✅ |
+| 该环境 `language/extra/` 内容 | `cann, cuda, hip, kernels, libdevice.py`——无 `tla` | ✅ |
+| 磁盘上 **6 个** `triton_ascend` wheel 文件的 RECORD | `language/extra/tla/` **全部 0 文件** [measured，6/6] | ✅ |
+| 源码树 | `third_party/ascend/language/tla/`（19 .py / 3977 行） | ✅ |
+| 把源码树挂进 `triton.language.extra.tla` 后编译 | 死于 `ascend_ir.tla_builder` 缺失 [measured，`probes/probe_aliased_import.py`] | ✅ |
+
+**每一条都是真的，而结论仍然是错的。** 这是本节要留下的教训。
+
+### 2.2 我漏的（决定性）
+
+| 事实 | 值 |
 |---|---|
-| 已装 `triton` | `triton_ascend 3.6.0+dev20260816011301`（2026-08-16 构建） |
-| `from triton.language.extra import tla` | **ImportError** [measured] |
-| 已装 `language/extra/` 内容 | `cann, cuda, hip, kernels, libdevice.py`——无 `tla` |
-| 本机 **6 个** `triton_ascend` wheel 的 RECORD | `language/extra/tla/` **全部 0 文件** [measured，6/6] |
-| `tla` 在哪里存在 | 仅源码：`triton-ascend/third_party/ascend/language/tla/`（19 个 .py，3977 行） |
-| TLA 首次落地 | 2026-10-24（`9e6fdfcfc`）——**晚于本机所有 wheel** |
-| adapter README 钉的 wheel | `dev20261030+git0c9d99ca`，**本机不存在** |
+| 可用 TLA 装在哪里 | `/home/s00653124/.conda/envs/s00653124_tla`——**另一个 conda 环境** |
+| wheel | `triton_ascend-3.6.0.dev20261101+git2a00c605` |
+| 该环境里的 tla 包 | **21 个 .py 文件**，RECORD 有 **43** 条 `extra/tla/` 记录 [measured，我复核] |
+| 导入与 API | `from triton.language.extra import tla` **成功**；`tla.jit` / `tla.dma` / `tla.annotate_buffer_versions` / `tla.alloc_buffer` / `tla.scope` / `tla.simd` / `tla.copy` / `tla.view` **全部存在** [measured] |
+| 门实测 | **PASS run `9e8c59f1c356badc32a0e0d396af4659`**，11/11 check，`Ascend950PR_9579`，容器内 12.45 s [measured，lead 于 2026-11-03 跑出；我核对回执] |
 
-我把"把源码树挂进去"这条没人试过的路也走了一遍 [measured，`probes/probe_aliased_import.py`]：
-Python 层可以导入、`@tla.jit` 可以装饰，然后编译在
-`compiler.py:232  ascend_ir.tla_builder(context, arch)` 处死掉——
-`AttributeError: module 'triton._C.libtriton.ascend.ir' has no attribute 'tla_builder'`。
-直接枚举确认：源码引用的 24 个 `create_tla_*` 与 26 个 `create_simd_*` 原生 builder，
-在已装的 `libtriton` 里**一个都没有**。
+### 2.3 为什么会漏——以及正确的表述是什么
 
-**含义**：手工把包拷进去也编译不了任何东西。任何迁移计划的第 0 步都是**让一个含 `tla` 的
-可安装产物存在**——而这需要厂商构建或本机自行编译整个 `triton-ascend`，两者都不在当前范围内。
+**两个原因叠加，缺一个都漏不掉：**
+
+1. **我只搜了默认环境与磁盘上的 wheel 文件。** 可用的构建**已经安装**在另一个 conda 环境里，
+   而它既不在 `python -c "import triton"` 的路径上，也不对应任何一个我列出的 wheel 文件。
+   `ls` 那些 wheel 得到"6/6 全 0"是真的，**但它答的是"磁盘上的 wheel 文件里有没有"，
+   不是"本机有没有能用的"**。这是两个不同的问题，我把前者当成了后者。
+2. **它需要 `docker exec -u root -e HOME=...`。** Ascend 驱动按 user namespace 持有 davinci
+   （`uda_occupy_dev_by_ns`），非 root 打开会被 EBUSY 拒绝；少了 `-e HOME` 又会因
+   `/data/miniconda3` 的 site-packages 找不到而报 `No module named 'pybind11'`。
+   完整路径见 [`how-to-run.md`](how-to-run.md) §1。
+
+**正确表述**（本文件此后一律用这一句）：
+
+> **默认的 tilelang 环境里没有 `tla`；本机另有一个专用 conda 环境 +
+> 容器（以 root 进入）里装着可用的 TLA，且 tla-npu 门在那里 PASS。**
+
+### 2.4 这个错误对决策的影响：D 变便宜了
+
+初版说 D 的第一步"需要厂商构建或自行编译整个 `triton-ascend`，两者都不在当前范围内"。
+**这个前提没了：可用的构建已经在本机，第一步是现成的。**
+
+| D 的第一步 | 初版说法 | 更正后 |
+|---|---|---|
+| 让一个含 `tla` 的可安装产物存在 | 需厂商构建 / 本地全量编译，超出范围 | **已存在**（专用 conda env + 容器 root），无需构建 |
+
+**所以 D 比初版所述便宜一大截。** 但两点仍然成立，不要过度修正：
+
+- **我们的 rmsnorm 内核从未以 TLA 编译过。** "TLA 能用"与"我们的内核在 TLA 上能用"是两件事，
+  后者仍然一次都没跑过（§11）。
+- 那道门门的是**固定文件**（§5.1），所以"能跑 TLA"不等于"能验收我们的内核"。
 
 ---
-
 ## 3. L2 账本：迁移确定性地丢掉 1.103×
 
 本节只放数字与结论，逐层证据见 [`l2-policy-field-width.md`](l2-policy-field-width.md) 与
@@ -340,22 +389,40 @@ for output that only the plain-Triton reference produced."
 
 L2 之后最要命的一行。**这一行是"未量化的成本"，不是"已解决的对应项"。**
 
-| 项 | 结论 | 标签 |
+> **本节已按实测更正（初版有两处错误说法）。** 初版写 "TLA 没有 staging 对应物"，
+> 并把 `Pipelined` 的缺席算在 TLA 头上。**两处都不准确**，见下表。
+
+| 项 | 结论（更正后） | 标签 |
 |---|---|---|
-| 缓冲版本标注 `annotate_buffer_versions` / `alloc_buffer(versions=)` | **存在且是一等公民**（`aux_ops.py:57-74` 发同一个 `hivm.multi_buffer` 注解；`alloc.py:41`；门内 `test_tla.py:43-45` 三缓冲全用 `versions=2`） | [source-only, high] |
-| `T.Pipelined(n, num_stages=k)` | **无对应物**——19 个 tla 文件里 `Pipelined` / `num_stages` **零出现** | [source-only, medium] |
-| `tl.range(..., num_stages=)` | 语言里有，但 TLA/HIVM 是否把它当作软件流水指令**未知** | [unknown] |
-| 我们的 `(4,2)` 能否直接搬 | **不能**。它是 `stages,yver = (4,2) if rows>1 else (2,1)`，是**实测出来的缓冲版本数** | [inferred, high] |
+| `tla.alloc_buffer(shape, dtype, space='ub', versions=1, _semantic=None)` | **存在，且 `versions` 是一等参数** [measured：在 `s00653124_tla` 环境实测签名与 `hasattr`] | [measured, high] |
+| `tla.annotate_buffer_versions(buf, versions)` | **存在**，发 `hivm.multi_buffer` 注解 | [measured, high] |
+| `tla.Pipelined` | **不存在** | [measured] |
+| **`tl.Pipelined`** | **同样不存在**——Triton 3.6.0 根本没有这个函数（两个环境都实测 `hasattr(tl,'Pipelined') == False`） | [measured] |
+| `tl.range(..., num_stages=)` | **存在**，签名含 `num_stages` / `loop_unroll_factor` / `disallow_acc_multi_buffer` [measured] | [measured] |
+| 我们的 `(4,2)` 能否映射到 `versions=` | **未测** | [unknown] |
 
-**含义：如果 TLA 的 staging 只能用 `versions=` 表达，那我们是在手工重建 `T.Pipelined` 现在
-替我们推导的那套调度，而实测最优值必须在 DSL 上重搜。** 这是一个**未量化的成本**。
+### 7.1 更正后的准确表述
 
-为什么它比 L2 更麻烦：L2 那一行的损失**有数字**（1.103×，可写进账本）；
-staging 这一行的损失**没有数字**，因为没有任何 TLA 内核在本机跑过，
-连一次编译都没成功（§2）。**一个没有数字的成本项，不能用"应该差不多"来处置。**
+**"TLA 没有 staging 对应物"是错的。** 准确的是：
+
+> **`versions=` 就是 TLA 表达 staging 的方式；`Pipelined` 在 Triton 3.6.0 里根本不存在
+> （不是 TLA 缺了它）；而我们的 `(4,2)` 是否能直接映射到 `versions=`，尚未测过。**
+
+这把缺口**缩小了**：它不是"TLA 少一个能力"，而是"同一套 `versions=`/`num_stages` 机制在
+两个 DSL 里的用法不同，映射关系待测"。而且**TileLang 的 `T.Pipelined` 是 TileLang 自己的**
+（跑在 TVM/TIR 上），所以它在 TLA 侧没有对应物是**构造使然**，不是缺陷。
+
+### 7.2 为什么它仍然是最大的未量化项
+
+缺口的**性质**变温和了，但**量级仍然未知**，理由没有变：
+
+- L2 那一行的损失**有数字**（1.103×，可写进账本）；
+- staging 这一行**没有数字**——**因为我们的 rmsnorm 内核从未以 TLA 编译过**，
+  所以没有任何 TLA 侧读数（不是"TLA 不可用"，是"我们的内核没试过"）。
+
+**一个没有数字的成本项，不能用"应该差不多"来处置。** 它仍然是 D 的便宜内核要回答的第 4 个问题。
 
 ---
-
 ## 8. 一个与 TLA 无关的风险（任何迁移都必须付）
 
 **我们的 1.1883 / 1.7144 只对 8192×4096 与 64×4096 两个形状认证。**
@@ -480,20 +547,20 @@ A 什么都不做，D 花同样的钱解除一个共同前置条件。
    我们唯一的已认证 EXCEED 会被换成一个未认证的同构实现，而**收益至今未被识别**。
 2. **A 太省，省掉的是信息。** A 完全站得住（保住认证结果），但它不解除任何不确定性，
    下一轮这个问题会被重新问一遍。D 花的是同一笔前置成本，却带回数字。
-3. **D 的第一步对 B/C/D 三者都是必要的。** 它不是"为迁移铺路"，
-   是"先让这件事具备可评估性"。（§2：本机没有任何含 `tla` 的 wheel。）
+3. **D 的第一步已经不需要做了。** 初版把它列为"共同前置条件且需授权"；实测证明
+   可用的 TLA 已在本机（§2），所以 B/C/D 的共同门槛**已经跨过**，D 可以直接从写内核开始。
 
-**但 D 的前置工作本身是有代价的，本文必须点明，否则 D 会显得比实际更可行：**
+### 10.1.1 D 的成本，更正前后
 
-| D 的第一步 | 现实 |
-|---|---|
-| 让一个含 `tla` 的 wheel 存在 | 需要**厂商构建**，或**在本机自行编译整个 `triton-ascend`** |
-| 两种方式是否在当前范围内 | **都不是**（本文 §2 已说明） |
+| | 初版 | 更正后 |
+|---|---|---|
+| 第一步 | 厂商构建或本地全量编译 `triton-ascend`，需单独授权 | **已完成**（`s00653124_tla` 环境 + 容器 root，门已 PASS） |
+| 剩余成本 | 上述构建 + 便宜内核 + 四项读数 | **只剩**便宜内核 + 四项读数 |
+| 定性 | 高、且被前置条件卡住 | **中**——无阻塞，可立即开始 |
 
-所以准确的表述是：**D 是一个"以该前置工作获得授权与人力为前提"的建议。**
-本文只能指出它是必要的、且对 B/C/D 三者通用，**本文不能自己解除那个前提**。
-采纳 D 时需要同时指定由谁承担这项构建工作；若不授权，则实际可得的选择是 **A**，
-而不是 D ——这一点不应被 §0 的"三个选项都绕不过它"掩盖。
+**所以 D 从"一个以授权为前提的建议"变成"一个现在就能开工的建议"。**
+这不改变推荐本身（仍然是 D），但改变了它的可执行性，也改变了对 A 的评价：
+A 的相对优势（零成本）缩小了，因为 D 的成本已经降下来了。
 
 **D 的交付物不是"TLA 版 rmsnorm"，是一份带数字的前置调研**：那个便宜内核的
 编译/计时/带宽/staging 四项读数。有了它，A/B/C 里选哪个都变成有证据的选择。
@@ -531,24 +598,37 @@ A 什么都不做，D 花同样的钱解除一个共同前置条件。
 
 ## 11. 本文没有证明的
 
-- **没有在设备上跑过任何 TLA 代码——一句写在最前面的总纲：本文关于 TLA 的全部陈述都是
-  [source-only]，不存在任何 TLA 的设备测量值，因为没有人在本卡上跑过 TLA。**
-  本机无 `tla` 包（§2），连一次编译都未成功过。
-  这包括：能力映射（[tla-capability.md](tla-capability.md) 全表）、L2 损失（§3，源码五层但未上机）、
-  以及对 TLA 版 rmsnorm 的任何时长/带宽预期。**没有任何一个 TLA 数字是测出来的。**
-- **没有测过 L2 损失的设备值**（§3.5）。1.103× 的损失是源码推理，不是实测。
-- **没有量化 staging 差距**（§7）。这是本文最大的未量化项。
-- **没有评估 `LoadGM2L1Params.l2_cache_ctrl` 借到向量路径的可行性**——那是设计问题，超出范围。
+**先说更正后的事实边界**：TLA **本身**在本机可用且已在设备上跑通（§2，门 PASS 有回执）。
+**但我们的 rmsnorm 内核从未以 TLA 编译或执行过**——这是一条**独立的、仍然成立**的陈述。
+下面区分这两类。
+
+### 11.1 仍然是 [source-only] 的（因为我们的内核没试过，不是因为 TLA 不可用）
+
+- **TLA 版 rmsnorm 的任何时长/带宽预期。** 没有任何读数，因为没写、没编译、没跑。
+- **L2 损失在 TLA 上的设备值。** 1.103× 的损失是从源码五层推出来的，不是实测（§3.5）。
+- **`(4,2)` 到 `versions=` 的映射关系**（§7）。机制存在，映射未测。
+- **能力映射表中"等价"的判定**（[`tla-capability.md`](tla-capability.md)）。那是 API 存在性 +
+  文档语义的核对，不是"两个 API 产生相同设备行为"的证明。
+
+### 11.2 现在有实测支撑的（更正前是 [source-only]）
+
+- **TLA 在本机可导入、可编译、可在 NPU 上正确执行。** 门 PASS，11/11，
+  run `9e8c59f1c356badc32a0e0d396af4659`，`Ascend950PR_9579`，容器内 12.45 s。
+- **`tla.alloc_buffer(versions=)` 与 `tla.annotate_buffer_versions` 存在**（在 `s00653124_tla` 环境实测）。
+- **`tl.Pipelined` 在 Triton 3.6.0 里不存在**（两个环境都实测 `hasattr` 为 False）。
+
+### 11.3 其它仍未闭合的
+
+- **没有评估 `LoadGM2L1Params.l2_cache_ctrl` 借到向量路径的可行性**——设计问题，超出范围。
 - **没有核 `StoreUB2GMParams` 之外是否另有写策略通路**；就源码所见没有，
   但 v33 的写策略是硬件默认 0，所以这一条**不需要通路**（§3，已关掉）。
 - **没有估内核重写的真实工作量**。v33 的 284 行是已调优终态，不是起点。
-- **第 5、6 节**取自 [`adapter-audit.md`](adapter-audit.md)（作者为 lead），
-  其中 `GATE_TEST`、`parse_argv`、`TOOLCHAIN_KEYS`、marker 负向后查、`README.md:23-31`、
-  `RECORDED, NOT GATED` 整表、`evaluator.py:6-13`、`PLAN` `:3` 及两个 adapter 的行数
-  我已逐条独立复核。**该文件不是来源独立的第二信源**——它是 lead 自己简报的源码硬化版（见文首说明）。
+- **第 5、6 节**取自 [`adapter-audit.md`](adapter-audit.md)（作者为 lead），其中 `GATE_TEST`、
+  `parse_argv`、`TOOLCHAIN_KEYS`、marker 负向后查、`README.md:23-31`、`RECORDED, NOT GATED` 整表、
+  `evaluator.py:6-13`、`PLAN` `:3` 及两个 adapter 的行数我已逐条独立复核。
+  **该文件不是来源独立的第二信源**——它是 lead 自己简报的源码硬化版（见文首说明）。
 
 ---
-
 ## 12. 一句话给读者
 
 **TLA 不是 TileLang 的新版本，是另一个 DSL 家族；本机今天没有它的可安装产物；
