@@ -1,27 +1,272 @@
 # Ascend950PR RMSNorm（TileLang-Ascend SimdVF）最终状态
 
-> 生成于第 69 轮。所有性能数字均来自 AgentGates 同窗口配对门控（15 配对、15/15 quiet、bootstrap 95% 下界），逐条可追溯至 `docs/ascend950pr/evidence/` 的原始 JSON。
+> **第 84 轮更新（2026-11-03）。** 本文此前为第 69 轮的 v23 记录，现已由 v33 取代。
+> **旧 v23 记录完整保留**（见文末"历史记录：v23 原始结论（已取代）"），不删改，只标注。
+>
+> **结论摘要：** 精度 6/6 合格；**两个形状均拿到官方门的正式 `EXCEED`** —— prefill 8192×4096
+> **1.1883 [1.1833, 1.1933]**（60 配对、60/60 quiet），decode 64×4096 **1.7144 [1.6699, 1.7448]**
+> （80 配对、76/80 quiet）。两处改动：**64 块 → 56 块**（实测 AIV 核数，64 块要多跑一波）与
+> **X 读路径 `NORMAL_FV` → `NOTALLOC_CLEAN`**。
+>
+> 门的判据词表是 MATCH / EXCEED / FAIL / RETEST；本文对整体结论一律使用门的词表，
+> 以免门自身的 EXCEED 被别处更宽松的措辞覆盖。
+> 证据文档：`docs/ascend950pr/core-count-and-l2-breakthrough.md`。
 
-## 1. 目标与达成情况
+## 1. 目标与达成情况（第 84 轮）
+
+| 形状 | 目标 | 实测（正式门控） | 判定 |
+|---|---|---|---|
+| **prefill 8192×4096** | 点估计 ≥1.0 且 95% 下界 ≥0.98 | **1.1883**，95% CI **[1.1833, 1.1933]**，60/60 quiet（100%） | **EXCEED ✅**（下界 >1.0） |
+| **decode 64×4096** | 同上 | **1.7144**，95% CI **[1.6699, 1.7448]**，76/80 quiet（95.0%） | **EXCEED ✅**（下界 >1.0） |
+| 精度 | 6 行全过 | **6/6 合格**（两形状 × normal / near_zero_rows / outlier_channels），authenticity 合格 | **合格** |
+
+两次运行均为 device 1、单形状、`verdict.status = "EXCEED"`、`verdict.reasons = []`、
+`stage = "performance"`。
+
+**结论：目标达成。** prefill 从 v23 的 0.771–0.850（四个窗口全部 FAIL）提升到 **1.19–1.25（EXCEED）**；
+decode 从 1.37–1.41 提升到 **1.71**。
+
+### 1.1 prefill 的点估计是一个区间，不是单点
+
+同一份代码在不同繁忙程度的卡上读数不同，但**方向从未改变**：
+
+| 运行 | 配对 | quiet 比例 | prefill 点估计 | 判定 |
+|---|---|---|---|---|
+| 第 3 次 | 45 | 42/45（93.3%） | 1.2425 [1.2188, 1.2642] | EXCEED |
+| **第 5 次（采用）** | **60** | **60/60（100%）** | **1.1883 [1.1833, 1.1933]** | **EXCEED** |
+
+**headline 用 60 配对那一次**，因为 100% quiet 是证据质量最高的，**不是因为它数字最大**——
+它反而是两者中较低的一个。诚实的读法是：**prefill ≈ 1.19–1.25，始终 EXCEED**。把 1.2425 当作
+"结果"属于挑选（cherry-picking）；把两者平均则是在编造一个没人测过的数。两者都不做。
+
+## 2. 最终候选
+
+`docs/ascend950pr/candidates/rmsnorm_simdvf_v33/kernel.py`
+（md5 `b07a95300bf895a383060f7226a8ed1f`；门控报告记录的 sha256 `c6c37fb7…b93d909`）
+
+相对 v23，**内核主体未改**，只有四处：
+
+| # | 改动 | 说明 |
+|---|---|---|
+| 1 | `N_CORES` 64 → **56** | 实测 AIV 核数；64 块要跑两波 |
+| 2 | 均匀切分 → **ragged 切分** | `start = core*nbase + min(core, rem)`；2048 tiles / 56 核 = 36 base + 32 核各多 1 |
+| 3 | 新增 `LOOP_MODE`，默认 `"dyn"` | dyn 适合 decode，recompute 适合 prefill；两模式均过正确性 |
+| 4 | `L2_READ_CTRL = "NOTALLOC_CLEAN"`，`L2_WRITE_CTRL = "NORMAL_FV"` | 见 §3 与 §4 |
+
+v23 的 per-row 寄存器累加、4 行展开主体、6 级 `vcadd` 归约、权重预转换、staging 深度全部保留。
+
+## 3. 两处改动的来源与量级
+
+### 3.1 核数是 56，不是 64
+
+| 来源 | 数值 |
+|---|---|
+| `platform_config/Ascend950PR_9579.ini` | `ai_core_cnt=28`、`vector_core_cnt=56`（第 20、22 行） |
+| `torch_npu` 设备属性 | `vector_core_num=56`、`multi_processor_count=56`、`L2_cache_size=128MB` |
+| 阶跃探针 | grid 1→56 **平坦（~10.0 µs）**，grid 57 **+82%（~18.5 µs）**，58→84 再平坦 |
+
+56 = 28 × 2（每 AIC 两个 AIV）。探针在 device 1 重复 6 次、device 0 一次，**阶跃位置一致**
+（幅度不同：dev1 +82%、dev0 +110%），说明这是部件的属性而不是某张卡的状态。
+
+固定总量扫描（13440 tiles × 4096 bf16 = 110 MB 进 + 110 MB 出）：**grid=56 → 187.2–188.3 µs
+（1169–1176 GB/s）**；grid=64 → 260–277 µs（794–846 GB/s），即 64 块慢 **39–48%**。28/32/40/48/60/70/
+80/120/140/280/420/560 均持平或更差；224/672（= 4×56 / 12×56）与 56 打平——正是波量化的特征。
+
+**几何改动单独的贡献**（同 body、两臂均 `NORMAL_FV`）：8192×4096 上 64 块 0.0760–0.0766 ms →
+56 块 0.0549–0.0556 ms，厂商 0.0555 ms，即 **~0.726 FAIL → ~1.01**；decode 1.22 → 1.53–1.54。
+
+### 3.2 L2 读路径：`NOTALLOC_CLEAN`
+
+prefill 工作集 = 64 MB X + 64 MB Y = **128 MB，恰好等于 128 MB 的 L2**，且每行只碰一次。两向都用
+`NORMAL_FV`（分配 + 首个牺牲）时，每次读 X 分配一条 L2 行、驱逐一条**脏的** Y 行，于是在读流中
+插入 GM 写回。`NOTALLOC_CLEAN` 保留行但标记为 **Clean**，驱逐时无需写回。写路径保持 `NORMAL_FV`
+是有意的：Y 仍需要 L2 吸收，需要停止分配的是读侧。
+
+20 个配对 quiet 窗口、device 1、56 块（比值 = 厂商/候选，越高越好）：
+
+| 读策略 | prefill 8192×4096 | decode 64×4096 |
+|---|---|---|
+| `NORMAL_FV` | 1.0170 [1.0144, 1.0179] | 1.6500 |
+| **`NOTALLOC_CLEAN`** | **1.1185 [1.1179, 1.1193]** | **1.6699** |
+
+即 **CLEAN 比 FV 快 1.103×**（prefill）/ 1.009×（decode）。机制与 devkit 一致：
+`l2_cache_mode_config.md:33,35`；`add_high_performance` Case 5 是 devkit 最大的一笔收益
+（A2 264.02→187.68 µs；950 混合带宽 1.712→2.256 TB/s）。
+
+**否定结果（值得保留）：** 内存研究排名第一的 `NOTALLOC_KEEP` 在内核层面实测 **0.6600 vs FV
+0.6626**，即 **没有复现** devkit Case 5 的收益。说明起作用的是"消除脏行写回"（CLEAN 做、KEEP 不做），
+而不是笼统的"绕过 L2"。
+
+## 4. ⛔ 安全红线：两个 benchmark 更快的策略是错的
+
+**`NOTALLOC_DROP` 与 `NORMAL_LV`（读路径）比安全策略快约 13%，并且会静默产生错误结果。
+它们的性能数字不是收益，是"内核没在做正确的事"的测量值。**
+
+每策略每形状 **64 次运行（8 seeds × 8 runs）**，判据 `max_abs < 0.06`，参考值用 CPU float64：
+
+| 读策略 | prefill 8192×4096 | decode 64×4096 |
+|---|---|---|
+| `NORMAL_FV` | 0/64 错 | 0/64 错 |
+| `NOTALLOC_CLEAN` | 0/64 错 | 0/64 错 |
+| `NOTALLOC_DROP` | 0/64 错 | **56/64 错，最差 max_abs 16.6** |
+| `NORMAL_LV` | （未报） | **30/30 错，最差 max_abs 12.3** |
+
+- **DROP 的形状依赖性正是它危险的原因**：prefill 上 0/64 干净，decode 上 56/64 错。只在 prefill
+  上验证过的团队会把它发出去。
+- **`NORMAL_LV` 在 decode 上 30/30 全错**，最差 12.3 —— 不是边缘或偶发失败。而它恰恰是读路径
+  **微基准的冠军**（`r65` 中 2.351 TB/s），正是 `r66` 已经记录过的陷阱：只有门控能排出策略优劣。
+- max_abs 12–17 对 0.06 的界，不是舍入差异，是另一个计算。
+
+**规则：本内核可信的读策略只有 `NORMAL_FV` 与 `NOTALLOC_CLEAN`。** 任何新策略必须先在两形状上
+通过 64 次正确性表，否则其计时数字**一个都不许引用**。
+
+## 5. 判定轨迹：那些 RETEST 是争用，轨迹本身就是证据
+
+同一份候选字节，五次门控尝试。点估计几乎不动，**变的只是证据质量**：
+
+| 运行 | 卡 | 配对 | prefill 比值 | prefill quiet | decode 比值 | decode quiet | 总判定 |
+|---|---|---|---|---|---|---|---|
+| 1 | 0 | 12 | 1.2088（1.2014–1.2150） | 4/12（33.3%） | 1.6396 [1.5561, 1.7328] | 12/12（100%） | RETEST（prefill 争用） |
+| 2 | 1 | 30 | 1.2459（1.1544–1.2938） | 17/30（56.7%） | 1.6913（1.5893–1.8206） | 20/30（66.7%） | RETEST（两者皆争用） |
+| 3 | 1 | 45 | **1.2425 [1.2188, 1.2642] = EXCEED** | 42/45（93.3%） | 1.6288（1.4389–1.8127） | 30/45（66.7%） | RETEST（decode 争用） |
+| 4 | 1 | 80（仅 decode） | —（未跑） | — | **1.7144 [1.6699, 1.7448] = EXCEED** | 76/80（95.0%） | EXCEED |
+| 5 | 1 | 60（仅 prefill） | **1.1883 [1.1833, 1.1933] = EXCEED** | **60/60（100%）** | —（未跑） | — | **EXCEED** |
+
+prefill 的 quiet 比例 33% → 57% → 93% → 100%，点估计始终在 1.19–1.25；decode 的 quiet 比例
+100% → 67% → 67% → 95%，点估计始终在 1.63–1.71。**若任何一次 RETEST 是真实失败，比值会保持不变
+而 quiet 比例上升时结论不变——但事实是：两个正式 EXCEED 恰好出现在 quiet 比例越过 70% 门槛的时刻。**
+这是"门卡在证据上、不是卡在内核上"的签名。
+
+门对 30 配对那次给出的 `why` 原文（保留，因为它记录了判定规则）：
+
+```
+8192x4096: 17 quiet window(s) of 30 (56.7%) is not an unbiased sample: 9 and 70% are both required,
+because the windows excluded for contention are excluded systematically, not at random
+```
+
+这把 RETEST 说清楚了：**它是关于采样的话，不是关于内核的话。** 门要求 quiet 窗口既 ≥9 个
+**又** ≥70%，因为被剔除的争用窗口不是随机剔除的，且偏差方向随形状反转（`perf-report.md` §4.2：
+持续 AICore 负载让 prefill 动 +105%、decode 动 −17%）。
+
+## 6. 复现方式（干净复跑需要什么）
+
+```bash
+source /data/pri/cann-9.2.0/cann/set_env.sh
+export PATH=<tilelang-env>/bin:$PATH TORCH_DEVICE_BACKEND_AUTOLOAD=0
+python3 <AgentGates>/agent_gates/adapters/forgekernel-ascend-npu/scripts/accept_rmsnorm.py \
+  --candidate <repo>/docs/ascend950pr/candidates/rmsnorm_simdvf_v33 \
+  --shape 8192x4096 --device 1 --pairs 60 --repeat 8 --child-timeout 1800 --cache <empty dir>
+```
+
+| 项 | 取值 | 原因 |
+|---|---|---|
+| `--pairs` | ≥9（实践用 45–80） | 门直接拒绝 `pairs < 9` |
+| `--cache` | 必需，且必须为空目录 | 陈旧 cache 被配置检查拒绝 |
+| `--child-timeout` | 900–2700 s | 115 s 远不够；80 配对那次用 2700 |
+| `--device` | **1** | 卡 0 健康状态为 `Alarm`（`perf-report.md` §7） |
+| quiet 窗口 | ≥70% | 否则无论比值多好都判 RETEST |
+| 形状 | **分开跑** | 两次 headline 都是单形状运行；两形状同跑时较吵的那个会把整体拖成 RETEST |
+
+## 7. 规模泛化（探索性，未认证）
+
+56 块 vs 64 块，同 body，厂商/候选比值（每格单次配对比较，方向强、单点近似）：
+
+| 形状 | 64 块 | 56 块 | 提升 |
+|---|---|---|---|
+| 8192×4096 | 0.715 | **1.009** | 1.411× |
+| 4096×4096 | 0.683 | **1.010** | 1.480× |
+| 2048×4096 | 0.691 | **0.998** | 1.445× |
+| 64×4096 | 0.926 | **1.237** | 1.335× |
+| 128×4096 | 0.765 | **1.223** | 1.598× |
+| 256×4096 | 0.829 | **1.030** | 1.243× |
+| 8192×2048 | 0.524 | **0.879** | 1.679× |
+
+区间 1.24×–1.68× 说明：**64 块的启动方式在每个测过的形状上都要吃掉五分之一到五分之二的性能**，
+不只是我们认证的两个形状。8192×2048 在 56 块下仍低于 1.0（0.879），所以这个修复普遍有益但不是万能。
+认证形状仍然只有 8192×4096 与 64×4096。
+
+## 8. 本轮两条 devkit 研究的一句话结论
+
+- **`02_reg_compute` 对我们已穷尽**（`devkit-lessons-reg-compute.md` §0）：v23 已实现该 devkit 最佳
+  案例（softmax Case 5，1785 cycles）的全部要点——单一 VF 区、寄存器常驻累加器、编译期 ALL mask
+  且 tail==0、每行 2 次载入（这正是 devkit 自己的地板）。我们的向量 IPC ≈1.25 vs 他们最好实测 1.37，
+  **没有调度余量，只有删指令**。devkit 自己的 GELU 消融给出了 MTE-bound 内核里向量工作的上限：
+  **向量时间 −55.2% 只换来端到端 +0.76%**。这就是本轮不动向量主体的原因。
+- **搬运形状已最优**（`devkit-lessons-memory.md` §5–§6）：每方向一笔连续 32 KB 突发、构造上 512B 对齐、
+  每次 ≥16 KB、核间不重叠。NDDMA/LoopMode、VECIN/VECOUT、L2 切分都不适用一次性读取。该研究自己的
+  结论是**唯一真正未试过的杠杆是"按方向的 L2 分配策略"**——正是本轮测的，而且它兑现了。
+
+## 9. 测量口径与限制
+
+- **判据事先声明**：MATCH = 点估计 ≥1.0 且 95% 下界 ≥0.98；EXCEED = 下界 >1.0；FAIL = 上界 <1.0；
+  其余 RETEST。两个形状都以**下界**越过 1.0（prefill 1.1833、decode 1.6699），不是只靠点估计。
+- **离散度**：prefill P90/P10 = 1.0226，decode 1.1540，均在门的 1.25 上限内，说明区间不是噪声撑开的。
+- **绝对时长**：prefill（60 配对）候选 0.051932 ms vs 厂商 0.061693 ms；decode（80 配对）候选
+  0.002187 ms vs 厂商 0.003745 ms。
+- **共享机**：全部测量都在有其他租户的卡上完成，已用配对 + 剔除缓解，但无法消除。这正是 §5 那些
+  RETEST 的成因。
+- **卡 0 健康状态为 `Alarm`**，正式测量用卡 1。
+- **未确立**：{DROP, NORMAL_LV} 之外未测策略的行为；写路径 `WT_SHARE_FIRST_VICTIM`（从未门控，
+  且它是另一条"让脏行不存在"的文档化途径）；§7 之外的形状；任何绝对 HBM 带宽结论——本仓库的微基准
+  速率都是含 L2 的。
+- **证据已归档（在树内）**：五份门控原始报告已从 `/tmp` 复制进 `docs/ascend950pr/evidence/`，
+  与源文件 **sha256 逐一相符**，并列入 `archive-manifest.json`：
+  `accept-rmsnorm-v33-12pair-2026-11-03.json`、`…-30pair-…`、`…-45pair-…`、
+  `accept-rmsnorm-v33-prefill-60pair-2026-11-03.json`、`accept-rmsnorm-v33-decode-80pair-2026-11-03.json`。
+  因此 §1 的正式 EXCEED 有在树内 artifact 支撑，不再依赖 `/tmp`。
+- **manifest 状态**：已重新生成且自洽——第 84 轮、候选 v33、**31 件 artifact**，逐件与磁盘核对
+  （31 件全过，无过期、无缺失），本文档、`core-count-and-l2-breakthrough.md`、R1–R84 轨迹复盘与其
+  逐轮 ledger 均已列入。重新钉哈希
+  **没有**改动那五份门控报告，它们仍持有门写出时的同一哈希，故 §1 的判定所依赖的证据字节自测量以来
+  未变。**维护提示**：manifest 连**文字**文件一起钉哈希，因此今后任何一次对已钉文档的编辑都会让它
+  重新过期、需要再次生成——这是该机制的固有属性，不是当前的缺陷；已提交的 manifest 是当下有效且
+  经过完整校验的。
+
+## 10. 最终交付物清单
+
+| 类别 | 路径 |
+|---|---|
+| 最终候选内核 | `docs/ascend950pr/candidates/rmsnorm_simdvf_v33/kernel.py` |
+| 候选说明 | `docs/ascend950pr/candidates/rmsnorm_simdvf_v33/NOTES.md` |
+| **本轮证据文档** | **`docs/ascend950pr/core-count-and-l2-breakthrough.md`** |
+| 最终汇报（本文） | `docs/ascend950pr/final-status.md` |
+| 长文性能报告 | `docs/ascend950pr/perf-report.md` |
+| devkit 研究 | `devkit-lessons-reg-compute.md`、`devkit-lessons-memory.md` |
+| 不可达性评估 | `docs/ascend950pr/d3-assessment.md` |
+| 归档清单 | `docs/ascend950pr/archive-manifest.json` |
+| 逐轮日志 | `docs/ascend950pr/plan-40-rounds.md` |
+| 全部门控报告 | v23 及更早：`docs/ascend950pr/evidence/accept-*-raw.json`；**v33：`accept-rmsnorm-v33-*`**（12pair / 30pair / 45pair / prefill-60pair / decode-80pair，均已入 manifest） |
+| 复现脚本 | `docs/ascend950pr/scripts/{patient_gate,final_verify,repro_check}.sh` |
+
+---
+
+# 历史记录：v23 原始结论（已取代）
+
+> **以下为第 69 轮 v23 的原文记录，完整保留用于追溯，不再代表当前状态。**
+> 阅读时请注意：**其中的 prefill "FAIL" 结论已被 v33 取代**（0.771–0.850 → 1.19–1.25 EXCEED）。
+> 保留它的价值在于：它记录了 64 块启动 + 全 `NORMAL_FV` 时代的真实水平，以及当时的测量稳定性分析。
+
+## H1. 目标与达成情况（第 69 轮）
 
 | 形状 | 目标 | 实测 | 判定 |
 |---|---|---|---|
 | **decode 64×4096** | 点估计 ≥1.0 且 95% 下界 ≥0.98 | **1.3726×** / 复现 **1.4056×**，下界 1.3561 / 1.3783 | **EXCEED ✅ 达标（两窗口复现）** |
 | **prefill 8192×4096** | 同上 | 四个窗口比值 **0.771–0.850**（均值 0.810），下界最高 **0.829** | **FAIL ❌ 未达标（四窗口均不达标）** |
 
-**结论：目标未完全达成。** decode 明确达标；prefill 仍差约 20%，本报告不把它表述为达标。
+**当时的结论：目标未完全达成。** decode 明确达标；prefill 仍差约 20%。
 
-## 2. 最终候选
+## H2. 当时的最终候选
 
-`docs/ascend950pr/candidates/rmsnorm_simdvf_v23/kernel.py`
+`docs/ascend950pr/candidates/rmsnorm_simdvf_v23/kernel.py`（md5 `0a1e6e2cab9a26ffabb5b04ddb1ee667`，至今未改动）
 
-- 单阶段逐行 RMSNorm，rows=4 路径**源码显式展开**（每行独立累加器与 scale 寄存器）
-- 每核连续分区（`base = (core*iters+step)*rows*d`）
+- 单阶段逐行 RMSNorm，rows=4 路径源码显式展开（每行独立累加器与 scale 寄存器）
+- 每核连续分区（`base = (core*iters+step)*rows*d`），**`T.Kernel(64)`**
 - x 四缓冲、输出双缓冲、4 条独立平方累加链、6 级 `vcadd` 归约
 - **四条 DMA 路径全部使用 `l2_cache_ctrl="NORMAL_FV"`**
-- 精度：两形状 15/15 quiet 门控中 precision 与 authenticity 均 pass；对 CPU float64 相对误差 decode ≤1e-3、prefill ≤3e-3（阈值 2⁻⁷≈7.8e-3）
+- 精度：两形状 15/15 quiet 门控中 precision 与 authenticity 均 pass；对 CPU float64 相对误差
+  decode ≤1e-3、prefill ≤3e-3（阈值 2⁻⁷≈7.8e-3）
 
-## 3. 演进轨迹（都是稳定可比的量）
+## H3. 演进轨迹（v4→v23）
 
 | 版本 | 关键改动 | prefill 候选时长 | decode 点估计 |
 |---|---|---|---|
@@ -32,54 +277,34 @@
 | v20/v21 | + L2 策略（全路径） | 0.0690 ms | 1.3497× / 1.3559× |
 | **v23** | **stages=4 + 全 `NORMAL_FV`** | **0.0651 ms** | **1.3726×** |
 
-prefill 候选时长累计下降 **19%**；decode 点估计从 1.2809 提升到 **1.3726**。
+prefill 候选时长累计下降 19%；decode 点估计从 1.2809 提升到 1.3726。
+**注意：这一整条轨迹的最优值仍是 FAIL，因为 64 块启动的限制从未被识别。**
 
-## 4. 关键正面发现
+## H4. 当时的正面发现
 
-1. **L2 缓存策略是决定性旋钮**：写路径未设策略时 1.13 TB/s，显式 `NORMAL_FV` 后 **3.08 TB/s（2.7×）**；读路径最佳约 2.35 TB/s。
+1. **L2 缓存策略是决定性旋钮**：写路径未设策略时 1.13 TB/s，显式 `NORMAL_FV` 后 **3.08 TB/s（2.7×）**；
+   读路径最佳约 2.35 TB/s。
 2. **两阶段 + 每行寄存器**在不引入竞争的前提下把向量工作量拉近厂商（曾多 63%，后仅多 10%）。
 3. **每核连续分区**（而非交错步长）消除了跨核跳跃访问。
 
-## 5. 关键否定结论（均有归档证据）
+## H5. 当时的否定结论
 
 - 两阶段 + **共享缓冲**传 rstd：真实竞争，rows=2 全尺寸错误且 batch=128 不确定 → 已否定（`r59-two-phase-race.json`）
 - `annotate_unlimit_memory` 不放宽 UB 启动限制（286720 B 必拒）
 - `vsqz`/`vusqz` 不是平方和原语；bf16 `vmula` 无混合精度；`T.gemm` 设备编译失败原因未隔离
-- 每行 8 条累加链、rows=2 细 tile、y 三缓冲、读/写异构策略组合：**均不如 v23**
+- 每行 8 条累加链、rows=2 细 tile、y 三缓冲、读/写异构策略组合：均不如 v23
 - 微基准排名不能直接搬到内核（读路径微基准最优的 `NORMAL_LV` 在内核中反而更慢）
+  —— **这一条在第 84 轮被量化成安全结论：它不仅更慢，而且在 decode 上 30/30 全错（见 §4）**
 
-## 6. 未达标的原因（量化）
+## H6. 当时对未达标原因的量化（已被 v33 解释）
 
 - 归因（同窗口）：vec 约 40.5 µs、DMA 双向仍比厂商慢约 18%；总时长 65 µs vs 厂商 53 µs
-- 若 DMA 与向量能完全重叠，理论上限约 40–45 µs（对应比值 1.2–1.3），说明**剩余空间在重叠效率**，但 TileLang 当前暴露的流水控制无法进一步压缩
-- 此结论限定为"本机 + 本工具链 + 本次实测"，不外推为硬件能力上限
+- 若 DMA 与向量能完全重叠，理论上限约 40–45 µs（对应比值 1.2–1.3）
+- **第 84 轮的更正**：当时把差距归因于"重叠效率"，而真正的第一大原因是**64 块启动被迫跑两波**
+  （§3.1）。同一个"理论 1.2–1.3"上限现在实测达到了（1.1883–1.2425），说明档位选对了。
+  剩余的 DMA 归因结论仍然有效，只是不再是最主要的解释。
 
-## 7. 复现方式
-
-```bash
-source /data/pri/cann-9.2.0/cann/set_env.sh
-export PATH=<tilelang-env>/bin:$PATH TORCH_DEVICE_BACKEND_AUTOLOAD=0
-python3 <AgentGates>/agent_gates/adapters/forgekernel-ascend-npu/scripts/accept_rmsnorm.py \
-  --candidate <repo>/docs/ascend950pr/candidates/rmsnorm_simdvf_v23 \
-  --shape 8192x4096 --device 0 --pairs 15 --repeat 8 --child-timeout 600 --cache <empty dir>
-```
-
-注意：该机为共享卡，多数时间存在**仅存在型**共租户（AICore 峰值低、canary 平坦），门控会正确判 RETEST；需要反复重试直到出现 15/15 quiet 的窗口（`docs/ascend950pr/scripts/patient_gate.sh`）。
-
-## 8. 复现性（第 69 轮独立验证）
-
-| 形状 | 第一窗口 | 独立复现窗口 | 结论 |
-|---|---|---|---|
-| decode 64×4096 | 1.3726× [1.3561, 1.3829] | **1.4056× [1.3783, 1.4493]** | 两窗口下界均远高于 1.0，达标可复现 |
-| prefill 8192×4096 | 0.8074× [0.8006, 0.8343]（候选 0.0651 ms） | **0.8133× [0.7956, 0.8432]**（候选 0.0694 ms） | 两窗口均低于 1.0，未达标可复现 |
-
-原始报告：`evidence/accept-v23-prefill-r69-repeat-raw.json`（sha256 `16dd59c8849da6a1ca00384f2d71e376cb5474df220692f85acf969d5d38af54`）等。
-
-## 9. 本轮新增否定结果
-
-- **x 五缓冲（stages=5）**：候选 0.0809 ms，明显更差 → 四缓冲是正确深度。
-
-## 10. 测量稳定性（重要，R74 更正）
+## H7. 测量稳定性（R74，仍有效）
 
 跨 3 个 15/15 quiet 独立窗口：
 
@@ -91,12 +316,10 @@ python3 <AgentGates>/agent_gates/adapters/forgekernel-ascend-npu/scripts/accept_
 | **decode 候选时长** | 0.002640 ms | 0.002673 ms | **1.3%** |
 | **decode 比值** | **1.3550** | **1.4056** | 3.7% |
 
-**正确读法**：
+**正确读法（第 84 轮仍在用）：** 两侧绝对时长同向漂移约 ±20%，因此**配对比值才是稳定量**。任何小于
+约 20% 的单窗口差异都不能作为改进证据。这正是 §1.1 把 prefill 报成 1.19–1.25 区间而非单点的依据。
 
-- **prefill**：两侧绝对时长同向漂移约 ±20%，因此**配对比值才是稳定量**（0.771–0.813，慢约 19–23%）。任何小于约 20% 的单窗口差异都不能作为改进证据——这正好解释了 R68–R70 那些"看起来更好"的变体为何都不成立。
-- **decode**：候选时长真正稳定（±1.3%），三个窗口的点估计 1.355–1.406，下界均远高于 0.98。
-
-## 11. 差距的物理来源（R73）
+## H8. 当时的差距物理来源（R73，仍有效）
 
 | 场景 | 聚合吞吐 |
 |---|---|
@@ -106,28 +329,19 @@ python3 <AgentGates>/agent_gates/adapters/forgekernel-ascend-npu/scripts/accept_
 | 我们内核（读+写） | **1.97 TB/s** |
 | 厂商算子（读+写） | **2.42 TB/s** |
 
-两个方向各自远未触顶，但并发时聚合吞吐下降；厂商在混合负载下高约 23%（与 20% 的时间差距同量级）。64 核 × (读+写) = 128 条并发 DRAM 流，页局部性差异是最可能的原因，而 **TileLang 未暴露页局部性、流数量或拷贝引擎选择的旋钮**。
+两个方向各自远未触顶，但并发时聚合吞吐下降。**第 84 轮补充**：`perf-report.md` §11 说"TileLang 未暴露
+页局部性、流数量或拷贝引擎选择的旋钮"对 **DRAM** 成立，但对 **L2 策略**不成立——
+`NOTALLOC_CLEAN` 一行改动就拿到了 1.103×，正是本节描述的那个缺口的一部分。
 
-## 12. prefill 四窗口终表（R77）
+## H9. prefill 四窗口终表（R77，v23 时代）
 
 | 窗口 | 比值 | 95% 区间 | 候选 | 厂商 | quiet |
 |---|---|---|---|---|---|
 | R67 | 0.8074 | [0.8006, 0.8343] | 0.0651 ms | 0.0530 ms | 15/15 |
 | R69 复现 | 0.8133 | [0.7956, 0.8432] | 0.0694 ms | 0.0563 ms | 15/15 |
 | R74 | 0.7711 | [0.7651, 0.8196] | 0.0789 ms | 0.0619 ms | 15/15 |
-| **R77** | **0.8502** | **[0.8294, 0.8830]** | 0.0761 ms | 0.0646 ms | 15/15 |
+| R77 | 0.8502 | [0.8294, 0.8830] | 0.0761 ms | 0.0646 ms | 15/15 |
 
-**四个独立窗口无一达到 1.0**；最好的一次下界也只有 0.8294，距离 0.98 的达标线很远。慢的幅度为 **15–23%**。这是本任务在 Ascend950PR + TileLang-Ascend 上的最终 prefill 结果。
-
-## 13. 最终交付物清单
-
-| 类别 | 路径 |
-|---|---|
-| 最终候选内核 | `docs/ascend950pr/candidates/rmsnorm_simdvf_v23/kernel.py` |
-| 最终汇报（本文） | `docs/ascend950pr/final-status.md` |
-| 不可达性评估 | `docs/ascend950pr/d3-assessment.md` |
-| 归档清单（含 sha256） | `docs/ascend950pr/archive-manifest.json` |
-| 逐轮日志 | `docs/ascend950pr/plan-40-rounds.md` |
-| 原始门控报告 | `docs/ascend950pr/evidence/accept-*-raw.json`（20+ 份） |
-| 复现脚本 | `docs/ascend950pr/scripts/{patient_gate,final_verify,repro_check}.sh` |
-| 验收门（含本轮修复） | AgentGates `agent_gates/adapters/forgekernel-ascend-npu/` |
+**四个独立窗口无一达到 1.0**；最好的一次下界也只有 0.8294。这是 **v23 在 64 块 + 全 `NORMAL_FV` 下**
+的 prefill 结果——第 84 轮保留此表是为了让"改了什么、值多少"可核对：四窗口的 0.771–0.850 与 v33 的
+1.1883–1.2425 之间，差的就是 64→56 块与读路径 CLEAN 这两件事。
