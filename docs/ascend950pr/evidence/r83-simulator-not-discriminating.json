@@ -1,0 +1,43 @@
+{
+  "round": "83",
+  "date": "2026-11-03",
+  "topic": "decisive: the installed simulator cannot discriminate kernel variants that differ 12 percent on hardware",
+  "cross_validation": {
+    "pair": "v23 (four accumulation chains, 16 inner iterations) vs v28 (eight chains, 8 inner iterations)",
+    "device_truth": {
+      "v23_ms": 0.065149,
+      "v28_ms": 0.072535,
+      "difference": "v28 is about 12 percent slower on the real device"
+    },
+    "simulated": {
+      "v23": {
+        "total_tick": 43686,
+        "core_us": 8.1,
+        "running_us": 7.49,
+        "total_cycles": 338639,
+        "executed": 13925
+      },
+      "v28": {
+        "total_tick": 43804,
+        "core_us": 8.1,
+        "running_us": 7.49,
+        "total_cycles": 338639,
+        "executed": 13925
+      }
+    },
+    "reading": [
+      "the two kernels issue the same total number of instructions (64 loads and 64 fma per row either way), so identical instruction counts are expected",
+      "but their hardware times differ by 12 percent because the dependency-chain depth and register pressure differ, and the simulator reports identical duration and identical total cycles",
+      "a model whose cycle count does not move for a change that costs 12 percent on the device cannot rank optimisations, so it cannot locate the bottleneck"
+    ]
+  },
+  "why": {
+    "correct_model_missing": "there is no model directory for Ascend950PR_9579, the exact chip npu-smi reports, so the run falls back to the generic dav_3510 v100 model",
+    "populated_models_fail": "the populated Ascend950PR_9571 and 9572 models both abort at aclInit with error 507000 on this host",
+    "other_limitations": [
+      "code_exe.csv is empty because the aibin has no debug_line, so code-region attribution is unavailable",
+      "MTE2 appears as one instruction while the device reports DMA busy 27 percent (this model) to 86-93 percent (full kernel), so memory-bound behaviour is not represented"
+    ]
+  },
+  "mission_impact": "the hope that simulation could locate the prefill bottleneck is not supported by this installation; the device-side paired gate remains the only trustworthy instrument"
+}
